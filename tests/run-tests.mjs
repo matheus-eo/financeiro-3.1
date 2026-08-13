@@ -147,6 +147,15 @@ test("Valores aceitam vírgula ou ponto decimal sem alterar a quantia", () => {
   assert.equal(context.asNumber_("1234,56"), 1234.56);
 });
 
+test("valuesEqual_: compara valores e datas usados na validação de correção", () => {
+  assert.equal(context.valuesEqual_(100, "100"), true);
+  assert.equal(context.valuesEqual_("Internet", "Internet"), true);
+  assert.equal(context.valuesEqual_("Internet", "Água"), false);
+  assert.equal(context.valuesEqual_(null, ""), true);
+  assert.equal(context.valuesEqual_(date("2026-07-10"), date("2026-07-10")), true);
+  assert.equal(context.valuesEqual_(date("2026-07-10"), date("2026-07-11")), false);
+});
+
 test("Carga inicial de julho: totais, cartão pendente e semáforo autorizado", () => {
   const paidExpenses = [
     [80, 36, "2026-07-05"], [120, 210, "2026-07-05"], [1000, 800, "2026-07-15"],
