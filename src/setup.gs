@@ -55,6 +55,11 @@ function configureNumberFormats_() {
   getSheet_(FIN.SHEETS.EXPENSE_CATALOG).getRange('E:E').setNumberFormat(currencyFormat);
   getSheet_(FIN.SHEETS.NET_WORTH).getRange('D:D').setNumberFormat(currencyFormat);
   getSheet_(FIN.SHEETS.REVENUES).getRange('F:F').setNumberFormat(currencyFormat);
+  // Sem isso, o Google Sheets converte "AAAA-MM" em data ao regravar a linha
+  // (Corrigir lançamento / Registrar pagamento), quebrando a comparação exata
+  // usada em todo o sistema (movement.Competência === competence).
+  movement.getRange('B:B').setNumberFormat('@');
+  getSheet_(FIN.SHEETS.REVENUES).getRange('B:B').setNumberFormat('@');
 }
 
 function setupFinanceiro3_1() {
