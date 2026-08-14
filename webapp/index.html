@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Financeiro 3.1</title>
+  <meta name="theme-color" content="#163A5F">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="tela-login" class="tela-login">
+    <div class="cartao-login">
+      <img src="icon.svg" alt="" width="64" height="64">
+      <h1>Financeiro 3.1</h1>
+      <p>Entre com sua conta Google para continuar.</p>
+      <div id="g_id_onload"
+           data-client_id="54102108105-ob1jh5lh8ugs52n3qo2fn8j9ujk06nsc.apps.googleusercontent.com"
+           data-callback="handleGoogleSignIn">
+      </div>
+      <div class="g_id_signin" data-type="standard" data-theme="filled_blue" data-size="large" data-shape="pill"></div>
+      <div class="mensagem" id="mensagem-login"></div>
+    </div>
+  </div>
+
+  <div id="app" style="display:none;">
+  <header class="topo">
+    <h1>Financeiro 3.1</h1>
+    <p id="competencia-atual">Carregando…</p>
+  </header>
+
+  <main>
+    <section class="resumo" id="resumo">
+      <div class="item">
+        <div class="rotulo">Entradas</div>
+        <div class="valor" id="resumo-entradas">—</div>
+      </div>
+      <div class="item">
+        <div class="rotulo">Custo planejado</div>
+        <div class="valor" id="resumo-planejado">—</div>
+      </div>
+      <div class="item">
+        <div class="rotulo">Resultado atual</div>
+        <div class="valor" id="resumo-atual">—</div>
+      </div>
+      <div class="item">
+        <div class="rotulo">Pendentes</div>
+        <div class="valor" id="resumo-pendentes">—</div>
+      </div>
+    </section>
+
+    <section class="cartao">
+      <h2>Registrar despesa</h2>
+      <form id="form-despesa">
+        <label for="descricao">Descrição</label>
+        <input type="text" id="descricao" required placeholder="Ex: Supermercado">
+
+        <label for="valor">Valor (R$)</label>
+        <input type="number" id="valor" required inputmode="decimal" step="0.01" min="0" placeholder="0,00">
+
+        <label for="categoria">Categoria</label>
+        <select id="categoria" required>
+          <option value="">Carregando categorias…</option>
+        </select>
+
+        <label for="data">Data</label>
+        <input type="date" id="data" required>
+
+        <div class="linha-checkbox">
+          <input type="checkbox" id="possui-vencimento">
+          <label for="possui-vencimento">Tem data de vencimento</label>
+        </div>
+
+        <div id="bloco-vencimento" style="display:none;">
+          <label for="data-vencimento">Data de vencimento</label>
+          <input type="date" id="data-vencimento">
+        </div>
+
+        <label for="observacao">Observação (opcional)</label>
+        <textarea id="observacao" placeholder="Detalhes adicionais"></textarea>
+
+        <button type="submit" class="primario" id="botao-salvar">Salvar despesa</button>
+        <div class="mensagem" id="mensagem-despesa"></div>
+      </form>
+    </section>
+
+    <section class="cartao">
+      <h2>Virar o mês</h2>
+      <p style="font-size:13px;color:var(--texto-suave);margin-top:0;">
+        Gera as despesas fixas do mês atual (aluguel, telefone, etc.) prontas para você preencher.
+        Use no início de cada mês, geralmente dia 02 ou 03.
+      </p>
+      <button type="button" class="secundario" id="botao-recorrencias">Gerar recorrências do mês atual</button>
+      <div class="mensagem" id="mensagem-recorrencias"></div>
+    </section>
+
+    <p class="rodape-info">Financeiro 3.1 — dados salvos direto na sua planilha</p>
+  </main>
+  </div>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="app.js"></script>
+</body>
+</html>
