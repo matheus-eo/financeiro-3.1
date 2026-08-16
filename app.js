@@ -90,6 +90,25 @@ async function loadCategories() {
   }
 }
 
+function movementLabel_(movement) {
+  const planned = formatMoney(movement.plannedValue);
+  const realized = movement.realizedValue === '' || movement.realizedValue === null ? '—' : formatMoney(movement.realizedValue);
+  return movement.description + ' — Plan.: ' + planned + ' / Real.: ' + realized + ' (' + movement.tipo + ')';
+}
+
+async function loadRecentMovements() {
+  const select = document.getElementById('lancamento-correcao');
+  try {
+    const data = await apiGet('recentMovements');
+    select.innerHTML = '<option value="">Selecione…</option>' +
+      data.movements.map(function(movement) {
+        return '<option value="' + movement.id + '">' + movementLabel_(movement) + '</option>';
+      }).join('');
+  } catch (error) {
+    select.innerHTML = '<option value="">Erro ao carregar lançamentos</option>';
+  }
+}
+
 function showMessage(elementId, text, isError) {
   const el = document.getElementById(elementId);
   el.textContent = text;
@@ -178,6 +197,35 @@ function setupCardPurchaseForm() {
   });
 }
 
+function setupCorrectionForm() {
+  const form = document.getElementById('form-correcao');
+  const botaoSalvar = document.getElementById('botao-salvar-correcao');
+
+  form.addEventListener('submit', async function(event) {
+    event.preventDefault();
+    botaoSalvar.disabled = true;
+    botaoSalvar.textContent = 'Salvando…';
+    try {
+      const payload = {
+        movementId: document.getElementById('lancamento-correcao').value,
+        field: document.getElementById('campo-correcao').value,
+        newValue: document.getElementById('novo-valor-correcao').value,
+        reason: document.getElementById('motivo-correcao').value
+      };
+      const result = await apiPost('correctMovement', payload);
+      renderSnapshot(result.snapshot);
+      showMessage('mensagem-correcao', 'Correção registrada com sucesso.', false);
+      form.reset();
+      loadRecentMovements();
+    } catch (error) {
+      showMessage('mensagem-correcao', error.message, true);
+    } finally {
+      botaoSalvar.disabled = false;
+      botaoSalvar.textContent = 'Salvar correção';
+    }
+  });
+}
+
 function setupRecurrences() {
   const botao = document.getElementById('botao-recorrencias');
   botao.addEventListener('click', async function() {
@@ -208,6 +256,7 @@ function showApp() {
   document.getElementById('app').style.display = 'block';
   loadCategories();
   loadSnapshot();
+  loadRecentMovements();
 }
 
 function showLogin(message) {
@@ -227,6 +276,7 @@ function handleGoogleSignIn(response) {
 
 setupForm();
 setupCardPurchaseForm();
+setupCorrectionForm();
 setupRecurrences();
 setupServiceWorker();
 
