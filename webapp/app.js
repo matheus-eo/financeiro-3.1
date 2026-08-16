@@ -77,15 +77,16 @@ async function loadSnapshot() {
 }
 
 async function loadCategories() {
-  const select = document.getElementById('categoria');
+  const selects = [document.getElementById('categoria'), document.getElementById('categoria-cartao')];
   try {
     const data = await apiGet('categories');
-    select.innerHTML = '<option value="">Selecione…</option>' +
+    const options = '<option value="">Selecione…</option>' +
       data.categories.map(function(category) {
         return '<option value="' + category + '">' + category + '</option>';
       }).join('');
+    selects.forEach(function(select) { select.innerHTML = options; });
   } catch (error) {
-    select.innerHTML = '<option value="">Erro ao carregar categorias</option>';
+    selects.forEach(function(select) { select.innerHTML = '<option value="">Erro ao carregar categorias</option>'; });
   }
 }
 
@@ -144,6 +145,39 @@ function setupForm() {
   });
 }
 
+function setupCardPurchaseForm() {
+  const dataInput = document.getElementById('data-cartao');
+  dataInput.value = todayISO();
+
+  const form = document.getElementById('form-cartao');
+  const botaoSalvar = document.getElementById('botao-salvar-cartao');
+
+  form.addEventListener('submit', async function(event) {
+    event.preventDefault();
+    botaoSalvar.disabled = true;
+    botaoSalvar.textContent = 'Salvando…';
+    try {
+      const payload = {
+        description: document.getElementById('descricao-cartao').value,
+        value: document.getElementById('valor-cartao').value,
+        category: document.getElementById('categoria-cartao').value,
+        date: dataInput.value,
+        note: document.getElementById('observacao-cartao').value
+      };
+      const result = await apiPost('registerCardPurchase', payload);
+      renderSnapshot(result.snapshot);
+      showMessage('mensagem-cartao', 'Compra no cartão registrada com sucesso.', false);
+      form.reset();
+      dataInput.value = todayISO();
+    } catch (error) {
+      showMessage('mensagem-cartao', error.message, true);
+    } finally {
+      botaoSalvar.disabled = false;
+      botaoSalvar.textContent = 'Salvar compra no cartão';
+    }
+  });
+}
+
 function setupRecurrences() {
   const botao = document.getElementById('botao-recorrencias');
   botao.addEventListener('click', async function() {
@@ -192,6 +226,7 @@ function handleGoogleSignIn(response) {
 }
 
 setupForm();
+setupCardPurchaseForm();
 setupRecurrences();
 setupServiceWorker();
 

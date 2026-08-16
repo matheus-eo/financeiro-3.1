@@ -86,6 +86,20 @@ function doPost(e) {
       return jsonOutput_({ ok: true, id: result.movement.ID, snapshot: snapshotForApi_() });
     }
 
+    if (action === 'registerCardPurchase') {
+      var cardCommand = {
+        operation: FIN.OPERATIONS.CARD,
+        competence: body.competence || getActiveCompetence_(),
+        date: body.date ? new Date(body.date) : now_(),
+        category: body.category,
+        description: body.description || '',
+        value: body.value,
+        note: body.note || ''
+      };
+      var cardResult = executeFinancialCommand_(cardCommand);
+      return jsonOutput_({ ok: true, id: cardResult.movement.ID, snapshot: snapshotForApi_() });
+    }
+
     if (action === 'generateRecurrences') {
       var lock = getFinanceLock_();
       lock.waitLock(30000);
