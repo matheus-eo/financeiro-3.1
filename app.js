@@ -247,7 +247,11 @@ function setupRecurrences() {
 
 function setupServiceWorker() {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js').catch(function() {});
+    navigator.serviceWorker.register('service-worker.js').then(function(registration) {
+      // O navegador só checa atualização automaticamente a cada 24h. Forçamos
+      // a checagem a cada abertura para que correções cheguem sem demora.
+      registration.update().catch(function() {});
+    }).catch(function() {});
   }
 }
 
