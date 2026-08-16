@@ -89,6 +89,35 @@
     </section>
 
     <section class="cartao">
+      <h2>Registrar compra no cartão</h2>
+      <p style="font-size:13px;color:var(--texto-suave);margin-top:0;">
+        Use para compras feitas no cartão de crédito. Elas entram no Cartão (Despesas) e
+        não afetam o Custo Planejado — só a fatura do cartão, que tem vencimento próprio.
+      </p>
+      <form id="form-cartao">
+        <label for="descricao-cartao">Descrição (opcional)</label>
+        <input type="text" id="descricao-cartao" placeholder="Ex: Almoço">
+
+        <label for="valor-cartao">Valor (R$)</label>
+        <input type="number" id="valor-cartao" required inputmode="decimal" step="0.01" min="0" placeholder="0,00">
+
+        <label for="categoria-cartao">Categoria</label>
+        <select id="categoria-cartao" required>
+          <option value="">Carregando categorias…</option>
+        </select>
+
+        <label for="data-cartao">Data</label>
+        <input type="date" id="data-cartao" required>
+
+        <label for="observacao-cartao">Observação (opcional)</label>
+        <textarea id="observacao-cartao" placeholder="Detalhes adicionais"></textarea>
+
+        <button type="submit" class="primario" id="botao-salvar-cartao">Salvar compra no cartão</button>
+        <div class="mensagem" id="mensagem-cartao"></div>
+      </form>
+    </section>
+
+    <section class="cartao">
       <h2>Virar o mês</h2>
       <p style="font-size:13px;color:var(--texto-suave);margin-top:0;">
         Gera as despesas fixas do mês atual (aluguel, telefone, etc.) prontas para você preencher.
