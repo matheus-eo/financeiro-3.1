@@ -72,6 +72,38 @@ function doGet(e) {
       });
       return jsonOutput_({ ok: true, movements: movements });
     }
+    if (action === 'dashboard') {
+      var dashboardSnapshot = getFinancialSnapshot_(getActiveCompetence_());
+      return jsonOutput_({
+        ok: true,
+        dashboard: {
+          competence: dashboardSnapshot.competence,
+          entries: dashboardSnapshot.entries,
+          plannedCost: dashboardSnapshot.plannedCost,
+          theoreticalResult: dashboardSnapshot.theoreticalResult,
+          currentResult: dashboardSnapshot.currentResult,
+          cardCurrent: dashboardSnapshot.cardCurrent,
+          cardExpenses: dashboardSnapshot.cardExpenses,
+          netWorth: dashboardSnapshot.netWorth,
+          launches: dashboardSnapshot.launches.map(function(launch) {
+            return {
+              description: launch.description,
+              dueDate: formatDate_(launch.dueDate, 'dd/MM/yyyy'),
+              plannedValue: launch.plannedValue,
+              semaphore: launch.semaphore
+            };
+          }),
+          cardBreakdown: dashboardSnapshot.cardBreakdown,
+          revenues: dashboardSnapshot.revenues,
+          assets: dashboardSnapshot.assets.map(function(asset) {
+            return { description: asset.Descrição, value: asset.Valor };
+          })
+        }
+      });
+    }
+    if (action === 'whatsappReport') {
+      return jsonOutput_({ ok: true, report: buildWhatsAppReport_(getFinancialSnapshot_(getActiveCompetence_())) });
+    }
     return jsonOutput_({ ok: false, error: 'Ação desconhecida: ' + action });
   } catch (error) {
     return jsonOutput_({ ok: false, error: error.message });
