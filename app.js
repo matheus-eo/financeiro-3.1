@@ -226,6 +226,119 @@ function setupCorrectionForm() {
   });
 }
 
+function dashboardLinha_(rotulo, valor) {
+  return '<div class="linha"><span>' + rotulo + '</span><strong>' + valor + '</strong></div>';
+}
+
+async function loadDashboard() {
+  const container = document.getElementById('dashboard-conteudo');
+  container.innerHTML = '<p class="texto-suave">Carregando…</p>';
+  try {
+    const data = await apiGet('dashboard');
+    const d = data.dashboard;
+    let html = '';
+    html += dashboardLinha_('Competência', d.competence);
+    html += dashboardLinha_('Entradas', formatMoney(d.entries));
+    html += dashboardLinha_('Custo planejado', formatMoney(d.plannedCost));
+    html += dashboardLinha_('Resultado teórico', formatMoney(d.theoreticalResult));
+    html += dashboardLinha_('Resultado atual', formatMoney(d.currentResult));
+    html += dashboardLinha_('Cartão atual', formatMoney(d.cardCurrent));
+    html += dashboardLinha_('Cartão (despesas)', formatMoney(d.cardExpenses));
+    html += dashboardLinha_('Patrimônio', formatMoney(d.netWorth));
+
+    html += '<div class="secao-titulo">Lançamentos pendentes</div>';
+    if (d.launches.length) {
+      d.launches.forEach(function(launch) {
+        html += dashboardLinha_(launch.dueDate + ' — ' + launch.description, formatMoney(launch.plannedValue));
+      });
+    } else {
+      html += '<p class="texto-suave">Nenhum lançamento pendente.</p>';
+    }
+
+    html += '<div class="secao-titulo">Cartão por categoria</div>';
+    if (d.cardBreakdown.length) {
+      d.cardBreakdown.forEach(function(item) {
+        html += dashboardLinha_(item.category, formatMoney(item.realizedValue));
+      });
+    } else {
+      html += '<p class="texto-suave">Sem compras no cartão.</p>';
+    }
+
+    html += '<div class="secao-titulo">Patrimônio</div>';
+    if (d.assets.length) {
+      d.assets.forEach(function(asset) {
+        html += dashboardLinha_(asset.description, formatMoney(asset.value));
+      });
+    } else {
+      html += '<p class="texto-suave">Nenhum patrimônio registrado.</p>';
+    }
+
+    container.innerHTML = html;
+  } catch (error) {
+    container.innerHTML = '<p class="mensagem erro">' + error.message + '</p>';
+  }
+}
+
+async function loadWhatsAppReport() {
+  const container = document.getElementById('whatsapp-conteudo');
+  container.textContent = 'Carregando…';
+  try {
+    const data = await apiGet('whatsappReport');
+    container.textContent = data.report;
+  } catch (error) {
+    container.textContent = 'Erro: ' + error.message;
+  }
+}
+
+function setupWhatsAppCopy() {
+  const botao = document.getElementById('botao-copiar-whatsapp');
+  botao.addEventListener('click', async function() {
+    const texto = document.getElementById('whatsapp-conteudo').textContent;
+    try {
+      await navigator.clipboard.writeText(texto);
+      showMessage('mensagem-whatsapp', 'Relatório copiado.', false);
+    } catch (error) {
+      showMessage('mensagem-whatsapp', 'Não foi possível copiar automaticamente. Selecione o texto manualmente.', true);
+    }
+  });
+}
+
+function setupNavigation() {
+  const menu = document.getElementById('menu-lateral');
+  const overlay = document.getElementById('menu-overlay');
+  const botaoMenu = document.getElementById('botao-menu');
+  const botaoFechar = document.getElementById('botao-fechar-menu');
+  const itens = document.querySelectorAll('.menu-item');
+  const paginas = document.querySelectorAll('.pagina');
+
+  function abrirMenu() {
+    menu.classList.add('aberto');
+    overlay.classList.add('visivel');
+  }
+
+  function fecharMenu() {
+    menu.classList.remove('aberto');
+    overlay.classList.remove('visivel');
+  }
+
+  function irPara(pagina) {
+    paginas.forEach(function(p) { p.classList.toggle('ativa', p.dataset.page === pagina); });
+    itens.forEach(function(i) { i.classList.toggle('ativo', i.dataset.page === pagina); });
+    if (pagina === 'dashboard') loadDashboard();
+    if (pagina === 'whatsapp') loadWhatsAppReport();
+    fecharMenu();
+  }
+
+  botaoMenu.addEventListener('click', abrirMenu);
+  botaoFechar.addEventListener('click', fecharMenu);
+  overlay.addEventListener('click', fecharMenu);
+  itens.forEach(function(item) {
+    item.addEventListener('click', function() { irPara(item.dataset.page); });
+  });
+
+  irPara('cartao');
+}
+
 function setupRecurrences() {
   const botao = document.getElementById('botao-recorrencias');
   botao.addEventListener('click', async function() {
@@ -282,6 +395,8 @@ setupForm();
 setupCardPurchaseForm();
 setupCorrectionForm();
 setupRecurrences();
+setupWhatsAppCopy();
+setupNavigation();
 setupServiceWorker();
 
 if (idToken) {

@@ -29,9 +29,27 @@
 
   <div id="app" style="display:none;">
   <header class="topo">
-    <h1>Financeiro 3.1</h1>
-    <p id="competencia-atual">Carregando…</p>
+    <button type="button" id="botao-menu" class="botao-menu" aria-label="Abrir menu">☰</button>
+    <div class="topo-titulo">
+      <h1>Financeiro 3.1</h1>
+      <p id="competencia-atual">Carregando…</p>
+    </div>
   </header>
+
+  <nav id="menu-lateral" class="menu-lateral" aria-label="Menu">
+    <div class="menu-cabecalho">
+      <span>Menu</span>
+      <button type="button" id="botao-fechar-menu" class="botao-fechar-menu" aria-label="Fechar menu">✕</button>
+    </div>
+    <button type="button" class="menu-item" data-page="cartao">💳 Compra no cartão</button>
+    <button type="button" class="menu-item" data-page="despesa">📝 Registrar despesa</button>
+    <button type="button" class="menu-item" data-page="correcao">🛠️ Corrigir lançamento</button>
+    <button type="button" class="menu-item" data-page="recorrencias">📅 Virar o mês</button>
+    <div class="menu-separador"></div>
+    <button type="button" class="menu-item" data-page="dashboard">📊 Dashboard</button>
+    <button type="button" class="menu-item" data-page="whatsapp">🟢 Relatório WhatsApp</button>
+  </nav>
+  <div id="menu-overlay" class="menu-overlay"></div>
 
   <main>
     <section class="resumo" id="resumo">
@@ -53,7 +71,36 @@
       </div>
     </section>
 
-    <section class="cartao">
+    <section class="pagina cartao" data-page="cartao">
+      <h2>Registrar compra no cartão</h2>
+      <p class="texto-suave">
+        Use para compras feitas no cartão de crédito. Elas entram no Cartão (Despesas) e
+        não afetam o Custo Planejado — só a fatura do cartão, que tem vencimento próprio.
+      </p>
+      <form id="form-cartao">
+        <label for="descricao-cartao">Descrição (opcional)</label>
+        <input type="text" id="descricao-cartao" placeholder="Ex: Almoço">
+
+        <label for="valor-cartao">Valor (R$)</label>
+        <input type="number" id="valor-cartao" required inputmode="decimal" step="0.01" min="0" placeholder="0,00">
+
+        <label for="categoria-cartao">Categoria</label>
+        <select id="categoria-cartao" required>
+          <option value="">Carregando categorias…</option>
+        </select>
+
+        <label for="data-cartao">Data</label>
+        <input type="date" id="data-cartao" required>
+
+        <label for="observacao-cartao">Observação (opcional)</label>
+        <textarea id="observacao-cartao" placeholder="Detalhes adicionais"></textarea>
+
+        <button type="submit" class="primario" id="botao-salvar-cartao">Salvar compra no cartão</button>
+        <div class="mensagem" id="mensagem-cartao"></div>
+      </form>
+    </section>
+
+    <section class="pagina cartao" data-page="despesa">
       <h2>Registrar despesa</h2>
       <form id="form-despesa">
         <label for="descricao">Descrição</label>
@@ -88,38 +135,9 @@
       </form>
     </section>
 
-    <section class="cartao">
-      <h2>Registrar compra no cartão</h2>
-      <p style="font-size:13px;color:var(--texto-suave);margin-top:0;">
-        Use para compras feitas no cartão de crédito. Elas entram no Cartão (Despesas) e
-        não afetam o Custo Planejado — só a fatura do cartão, que tem vencimento próprio.
-      </p>
-      <form id="form-cartao">
-        <label for="descricao-cartao">Descrição (opcional)</label>
-        <input type="text" id="descricao-cartao" placeholder="Ex: Almoço">
-
-        <label for="valor-cartao">Valor (R$)</label>
-        <input type="number" id="valor-cartao" required inputmode="decimal" step="0.01" min="0" placeholder="0,00">
-
-        <label for="categoria-cartao">Categoria</label>
-        <select id="categoria-cartao" required>
-          <option value="">Carregando categorias…</option>
-        </select>
-
-        <label for="data-cartao">Data</label>
-        <input type="date" id="data-cartao" required>
-
-        <label for="observacao-cartao">Observação (opcional)</label>
-        <textarea id="observacao-cartao" placeholder="Detalhes adicionais"></textarea>
-
-        <button type="submit" class="primario" id="botao-salvar-cartao">Salvar compra no cartão</button>
-        <div class="mensagem" id="mensagem-cartao"></div>
-      </form>
-    </section>
-
-    <section class="cartao">
+    <section class="pagina cartao" data-page="correcao">
       <h2>Corrigir lançamento</h2>
-      <p style="font-size:13px;color:var(--texto-suave);margin-top:0;">
+      <p class="texto-suave">
         Corrige um lançamento já salvo (ex: valor errado ou reclassificar como cartão).
         A alteração fica registrada no Histórico com o motivo.
       </p>
@@ -149,14 +167,28 @@
       </form>
     </section>
 
-    <section class="cartao">
+    <section class="pagina cartao" data-page="recorrencias">
       <h2>Virar o mês</h2>
-      <p style="font-size:13px;color:var(--texto-suave);margin-top:0;">
+      <p class="texto-suave">
         Gera as despesas fixas do mês atual (aluguel, telefone, etc.) prontas para você preencher.
         Use no início de cada mês, geralmente dia 02 ou 03.
       </p>
       <button type="button" class="secundario" id="botao-recorrencias">Gerar recorrências do mês atual</button>
       <div class="mensagem" id="mensagem-recorrencias"></div>
+    </section>
+
+    <section class="pagina cartao" data-page="dashboard">
+      <h2>Dashboard</h2>
+      <div id="dashboard-conteudo" class="dashboard-conteudo">
+        <p class="texto-suave">Carregando…</p>
+      </div>
+    </section>
+
+    <section class="pagina cartao" data-page="whatsapp">
+      <h2>Relatório WhatsApp</h2>
+      <pre id="whatsapp-conteudo" class="whatsapp-conteudo">Carregando…</pre>
+      <button type="button" class="secundario" id="botao-copiar-whatsapp">Copiar relatório</button>
+      <div class="mensagem" id="mensagem-whatsapp"></div>
     </section>
 
     <p class="rodape-info">Financeiro 3.1 — dados salvos direto na sua planilha</p>
