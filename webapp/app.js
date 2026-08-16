@@ -3,6 +3,20 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbxKavPigKXlf916RCVWWKUs
 
 let idToken = sessionStorage.getItem('idToken') || '';
 
+// Mensagens que o servidor devolve quando o idToken está ausente, expirado ou inválido.
+// Nesses casos o app precisa voltar para a tela de login em vez de só mostrar um aviso.
+const AUTH_ERROR_MESSAGES = [
+  'Faça login para continuar.',
+  'Sessão expirada. Faça login novamente.',
+  'Token não pertence a este app.',
+  'E-mail não verificado.',
+  'Conta não autorizada.'
+];
+
+function isAuthError_(message) {
+  return AUTH_ERROR_MESSAGES.indexOf(message) >= 0;
+}
+
 function formatMoney(value) {
   const number = Number(value) || 0;
   return 'R$ ' + number.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -19,7 +33,10 @@ async function apiGet(action) {
   const url = API_URL + '?action=' + encodeURIComponent(action) + '&idToken=' + encodeURIComponent(idToken);
   const response = await fetch(url);
   const data = await response.json();
-  if (!data.ok) throw new Error(data.error || 'Erro desconhecido.');
+  if (!data.ok) {
+    if (isAuthError_(data.error)) showLogin(data.error);
+    throw new Error(data.error || 'Erro desconhecido.');
+  }
   return data;
 }
 
@@ -31,7 +48,10 @@ async function apiPost(action, payload) {
     body: JSON.stringify(body)
   });
   const data = await response.json();
-  if (!data.ok) throw new Error(data.error || 'Erro desconhecido.');
+  if (!data.ok) {
+    if (isAuthError_(data.error)) showLogin(data.error);
+    throw new Error(data.error || 'Erro desconhecido.');
+  }
   return data;
 }
 
@@ -73,7 +93,11 @@ function showMessage(elementId, text, isError) {
   const el = document.getElementById(elementId);
   el.textContent = text;
   el.className = 'mensagem ' + (isError ? 'erro' : 'sucesso');
-  setTimeout(function() { el.className = 'mensagem'; }, 6000);
+  // Erros ficam visíveis até a próxima ação: um aviso que some sozinho pode passar
+  // despercebido e dar a falsa impressão de que o lançamento foi salvo.
+  if (!isError) {
+    setTimeout(function() { el.className = 'mensagem'; }, 6000);
+  }
 }
 
 function setupForm() {
