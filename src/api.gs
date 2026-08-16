@@ -58,6 +58,20 @@ function doGet(e) {
     if (action === 'snapshot') {
       return jsonOutput_({ ok: true, snapshot: snapshotForApi_() });
     }
+    if (action === 'recentMovements') {
+      var competence = e.parameter.competence || getActiveCompetence_();
+      var movements = findRecords_(FIN.SHEETS.MOVEMENTS, function(m) {
+        return m.Competência === competence && m.Tipo !== FIN.TYPES.REVENUE;
+      }).sort(function(a, b) {
+        return new Date(b['Criado Em']).getTime() - new Date(a['Criado Em']).getTime();
+      }).slice(0, 25).map(function(m) {
+        return {
+          id: m.ID, description: m.Descrição, tipo: m.Tipo,
+          plannedValue: m['Valor Planejado'], realizedValue: m['Valor Realizado']
+        };
+      });
+      return jsonOutput_({ ok: true, movements: movements });
+    }
     return jsonOutput_({ ok: false, error: 'Ação desconhecida: ' + action });
   } catch (error) {
     return jsonOutput_({ ok: false, error: error.message });
@@ -98,6 +112,18 @@ function doPost(e) {
       };
       var cardResult = executeFinancialCommand_(cardCommand);
       return jsonOutput_({ ok: true, id: cardResult.movement.ID, snapshot: snapshotForApi_() });
+    }
+
+    if (action === 'correctMovement') {
+      var correctionCommand = {
+        operation: FIN.OPERATIONS.CORRECTION,
+        movementId: body.movementId,
+        field: body.field,
+        newValue: body.newValue,
+        reason: body.reason
+      };
+      var correctionResult = executeFinancialCommand_(correctionCommand);
+      return jsonOutput_({ ok: true, id: correctionResult.movement.ID, snapshot: snapshotForApi_() });
     }
 
     if (action === 'generateRecurrences') {

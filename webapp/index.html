@@ -118,6 +118,38 @@
     </section>
 
     <section class="cartao">
+      <h2>Corrigir lançamento</h2>
+      <p style="font-size:13px;color:var(--texto-suave);margin-top:0;">
+        Corrige um lançamento já salvo (ex: valor errado ou reclassificar como cartão).
+        A alteração fica registrada no Histórico com o motivo.
+      </p>
+      <form id="form-correcao">
+        <label for="lancamento-correcao">Lançamento</label>
+        <select id="lancamento-correcao" required>
+          <option value="">Carregando lançamentos…</option>
+        </select>
+
+        <label for="campo-correcao">Campo a corrigir</label>
+        <select id="campo-correcao" required>
+          <option value="Valor Planejado">Valor Planejado</option>
+          <option value="Valor Realizado">Valor Realizado</option>
+          <option value="Descrição">Descrição</option>
+          <option value="Categoria">Categoria</option>
+          <option value="Observação">Observação</option>
+        </select>
+
+        <label for="novo-valor-correcao">Novo valor</label>
+        <input type="text" id="novo-valor-correcao" required placeholder="Ex: 0 ou novo texto">
+
+        <label for="motivo-correcao">Motivo</label>
+        <textarea id="motivo-correcao" required placeholder="Ex: Reclassificado como compra no cartão"></textarea>
+
+        <button type="submit" class="secundario" id="botao-salvar-correcao">Salvar correção</button>
+        <div class="mensagem" id="mensagem-correcao"></div>
+      </form>
+    </section>
+
+    <section class="cartao">
       <h2>Virar o mês</h2>
       <p style="font-size:13px;color:var(--texto-suave);margin-top:0;">
         Gera as despesas fixas do mês atual (aluguel, telefone, etc.) prontas para você preencher.
