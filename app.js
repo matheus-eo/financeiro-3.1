@@ -64,7 +64,8 @@ function renderSnapshot(snapshot) {
   atual.textContent = formatMoney(snapshot.currentResult);
   atual.className = 'valor ' + (snapshot.currentResult >= 0 ? 'positivo' : 'negativo');
 
-  document.getElementById('resumo-pendentes').textContent = snapshot.launches.length;
+  const futurosTotal = snapshot.launches.reduce(function(sum, launch) { return sum + launch.plannedValue; }, 0);
+  document.getElementById('resumo-pendentes').textContent = formatMoney(futurosTotal);
 }
 
 async function loadSnapshot() {
