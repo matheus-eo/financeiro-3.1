@@ -321,6 +321,7 @@ function irParaPagina(pagina) {
   if (pagina === 'whatsapp') loadWhatsAppReport();
   if (pagina === 'patrimonio') loadPatrimonio();
   if (pagina === 'acesso') loadAccessList();
+  if (pagina === 'correcao') loadRecentMovements();
   fecharMenuLateral_();
 }
 
@@ -519,7 +520,6 @@ async function showApp() {
   }
   loadCategories();
   loadSnapshot();
-  loadRecentMovements();
   irParaPagina(session.isEditor ? 'cartao' : 'dashboard');
 }
 
