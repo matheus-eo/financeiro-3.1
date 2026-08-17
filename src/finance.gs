@@ -14,9 +14,12 @@ function calculateSemaphore_(movement, referenceDate) {
   return due.getTime() < today.getTime() ? FIN.SEMAPHORE.RED : FIN.SEMAPHORE.YELLOW;
 }
 
+// Lançamentos Futuros: despesas com vencimento ainda não pagas. A fatura do
+// cartão (FATURA_CARTAO) fica de fora — seu total já aparece em Cartão Atual /
+// Cartão (Despesas), então listá-la aqui duplicaria a mesma informação.
 function getLaunches_(movements, referenceDate) {
   return movements.filter(function(movement) {
-    return isPayableExpense_(movement) &&
+    return movement.Tipo === FIN.TYPES.EXPENSE &&
       isAffirmative_(movement['Possui Vencimento']) &&
       !isPaymentConfirmed_(movement.Pago);
   }).map(function(movement) {

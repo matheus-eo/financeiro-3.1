@@ -3,13 +3,42 @@ function getOAuthClientId_() {
   return '54102108105-ob1jh5lh8ugs52n3qo2fn8j9ujk06nsc.apps.googleusercontent.com';
 }
 
-function getAllowedEmails_() {
-  return ['matcash@gmail.com'];
+// O dono é fixo no código e sempre tem acesso total, inclusive às Configurações de acesso.
+// Editores e leitores adicionais são geridos pelo próprio app e ficam guardados em Configurações.
+function getOwnerEmail_() {
+  return 'matcash@gmail.com';
 }
 
-// Verifica o ID token do Google Sign-In direto com o endpoint do Google
-// (sem lib de JWT), conferindo audiência, e-mail permitido e verificação de e-mail.
-function checkGoogleIdToken_(idToken) {
+function parseEmailList_(raw) {
+  return String(raw || '').split(',').map(function(email) {
+    return email.trim().toLowerCase();
+  }).filter(function(email) { return email; });
+}
+
+function normalizeEmailList_(value) {
+  var raw = Array.isArray(value) ? value.join(',') : String(value || '');
+  var seen = {};
+  var result = [];
+  parseEmailList_(raw).forEach(function(email) {
+    assert_(email.indexOf('@') > 0, 'E-mail inválido: ' + email + '.');
+    if (!seen[email]) { seen[email] = true; result.push(email); }
+  });
+  return result;
+}
+
+function getEditorEmails_() {
+  var list = parseEmailList_(getConfigValue_('ACESSO_EDITORES', ''));
+  if (list.indexOf(getOwnerEmail_()) === -1) list.push(getOwnerEmail_());
+  return list;
+}
+
+function getViewerEmails_() {
+  return parseEmailList_(getConfigValue_('ACESSO_LEITORES', ''));
+}
+
+// Verifica o ID token do Google Sign-In direto com o endpoint do Google (sem lib de JWT),
+// conferindo audiência e e-mail verificado, e resolve o papel do usuário (dono/editor/leitor).
+function authenticate_(idToken) {
   assert_(idToken, 'Faça login para continuar.');
   var response = UrlFetchApp.fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(idToken), {
     muteHttpExceptions: true
@@ -18,7 +47,20 @@ function checkGoogleIdToken_(idToken) {
   var info = JSON.parse(response.getContentText());
   assert_(info.aud === getOAuthClientId_(), 'Token não pertence a este app.');
   assert_(info.email_verified === 'true' || info.email_verified === true, 'E-mail não verificado.');
-  assert_(getAllowedEmails_().indexOf(info.email) >= 0, 'Conta não autorizada.');
+  var email = String(info.email).toLowerCase();
+  var isOwner = email === getOwnerEmail_();
+  var isEditor = isOwner || getEditorEmails_().indexOf(email) >= 0;
+  var isViewer = isEditor || getViewerEmails_().indexOf(email) >= 0;
+  assert_(isViewer, 'Conta não autorizada.');
+  return { email: email, isOwner: isOwner, isEditor: isEditor };
+}
+
+function requireEditor_(auth) {
+  assert_(auth.isEditor, 'Sua conta só tem acesso de leitura neste app.');
+}
+
+function requireOwner_(auth) {
+  assert_(auth.isOwner, 'Apenas o desenvolvedor pode alterar isso.');
 }
 
 function jsonOutput_(payload) {
@@ -50,7 +92,11 @@ function snapshotForApi_() {
 function doGet(e) {
   try {
     var action = e.parameter.action;
-    checkGoogleIdToken_(e.parameter.idToken);
+    var auth = authenticate_(e.parameter.idToken);
+
+    if (action === 'session') {
+      return jsonOutput_({ ok: true, email: auth.email, isOwner: auth.isOwner, isEditor: auth.isEditor });
+    }
     if (action === 'categories') {
       var categories = getActiveCategories_().map(function(c) { return c.Categoria; });
       return jsonOutput_({ ok: true, categories: categories });
@@ -104,6 +150,15 @@ function doGet(e) {
     if (action === 'whatsappReport') {
       return jsonOutput_({ ok: true, report: buildWhatsAppReport_(getFinancialSnapshot_(getActiveCompetence_())) });
     }
+    if (action === 'accessList') {
+      requireOwner_(auth);
+      return jsonOutput_({
+        ok: true,
+        owner: getOwnerEmail_(),
+        editors: getEditorEmails_().filter(function(email) { return email !== getOwnerEmail_(); }),
+        viewers: getViewerEmails_()
+      });
+    }
     return jsonOutput_({ ok: false, error: 'Ação desconhecida: ' + action });
   } catch (error) {
     return jsonOutput_({ ok: false, error: error.message });
@@ -113,10 +168,11 @@ function doGet(e) {
 function doPost(e) {
   try {
     var body = JSON.parse(e.postData.contents);
-    checkGoogleIdToken_(body.idToken);
+    var auth = authenticate_(body.idToken);
     var action = body.action;
 
     if (action === 'registerExpense') {
+      requireEditor_(auth);
       var command = {
         operation: FIN.OPERATIONS.EXPENSE,
         competence: body.competence || getActiveCompetence_(),
@@ -133,6 +189,7 @@ function doPost(e) {
     }
 
     if (action === 'registerCardPurchase') {
+      requireEditor_(auth);
       var cardCommand = {
         operation: FIN.OPERATIONS.CARD,
         competence: body.competence || getActiveCompetence_(),
@@ -147,6 +204,7 @@ function doPost(e) {
     }
 
     if (action === 'correctMovement') {
+      requireEditor_(auth);
       var correctionCommand = {
         operation: FIN.OPERATIONS.CORRECTION,
         movementId: body.movementId,
@@ -158,26 +216,77 @@ function doPost(e) {
       return jsonOutput_({ ok: true, id: correctionResult.movement.ID, snapshot: snapshotForApi_() });
     }
 
-    if (action === 'generateRecurrences') {
+    if (action === 'updateNetWorth') {
+      requireEditor_(auth);
+      var netWorthCommand = {
+        operation: FIN.OPERATIONS.NET_WORTH,
+        date: body.date ? new Date(body.date) : now_(),
+        description: body.description,
+        value: body.value,
+        note: body.note || ''
+      };
+      executeFinancialCommand_(netWorthCommand);
+      return jsonOutput_({ ok: true, snapshot: snapshotForApi_() });
+    }
+
+    if (action === 'updateCardCurrent') {
+      requireEditor_(auth);
+      var cardCurrentCommand = {
+        operation: FIN.OPERATIONS.CARD_CURRENT,
+        competence: body.competence || getActiveCompetence_(),
+        value: body.value,
+        note: body.note || ''
+      };
+      executeFinancialCommand_(cardCurrentCommand);
+      return jsonOutput_({ ok: true, snapshot: snapshotForApi_() });
+    }
+
+    if (action === 'updateAccessList') {
+      requireOwner_(auth);
       var lock = getFinanceLock_();
       lock.waitLock(30000);
       var tx = new FinanceTransaction_();
       try {
-        var generated = ensureRecurringForCompetence_(tx, getActiveCompetence_());
-        generated.forEach(function(movement) {
-          appendHistory_(tx, {
-            operation: 'Gerar despesa recorrente (app)', table: FIN.SHEETS.MOVEMENTS,
-            recordId: movement.ID, next: movement
-          });
+        var editors = normalizeEmailList_(body.editors);
+        var viewers = normalizeEmailList_(body.viewers);
+        var previous = { editors: getEditorEmails_(), viewers: getViewerEmails_() };
+        setConfigValue_(tx, 'ACESSO_EDITORES', editors.join(','), 'E-mails com acesso total ao app, além do dono.');
+        setConfigValue_(tx, 'ACESSO_LEITORES', viewers.join(','), 'E-mails com acesso somente leitura ao app.');
+        appendHistory_(tx, {
+          operation: 'Atualizar acesso ao app', table: FIN.SHEETS.CONFIG, recordId: 'ACESSO',
+          previous: previous, next: { editors: editors, viewers: viewers }
         });
-        refreshAllVisualizations_(tx);
         tx.commit();
-        return jsonOutput_({ ok: true, generated: generated.length, snapshot: snapshotForApi_() });
+        return jsonOutput_({ ok: true, editors: editors, viewers: viewers });
       } catch (innerError) {
         tx.rollback();
         throw innerError;
       } finally {
         lock.releaseLock();
+      }
+    }
+
+    if (action === 'generateRecurrences') {
+      requireEditor_(auth);
+      var lock2 = getFinanceLock_();
+      lock2.waitLock(30000);
+      var tx2 = new FinanceTransaction_();
+      try {
+        var generated = ensureRecurringForCompetence_(tx2, getActiveCompetence_());
+        generated.forEach(function(movement) {
+          appendHistory_(tx2, {
+            operation: 'Gerar despesa recorrente (app)', table: FIN.SHEETS.MOVEMENTS,
+            recordId: movement.ID, next: movement
+          });
+        });
+        refreshAllVisualizations_(tx2);
+        tx2.commit();
+        return jsonOutput_({ ok: true, generated: generated.length, snapshot: snapshotForApi_() });
+      } catch (innerError) {
+        tx2.rollback();
+        throw innerError;
+      } finally {
+        lock2.releaseLock();
       }
     }
 

@@ -43,7 +43,7 @@ function rebuildDashboardChart_(sheet, snapshot) {
     ['Indicador', 'Valor'],
     ['Planejado', snapshot.plannedCost],
     ['Realizado', snapshot.actualExpenseTotal],
-    ['Pendente', dashboardLaunchTotal_(snapshot)]
+    ['Futuro', dashboardLaunchTotal_(snapshot)]
   ]);
   sheet.getRange('N1:O4').setNumberFormat('R$ #,##0.00;[Red]-R$ #,##0.00');
   sheet.hideColumns(14, 2);
@@ -69,9 +69,9 @@ function refreshDashboard_(tx, snapshot) {
     ['ENTRADAS', snapshot.entries, '', 'CUSTO PLANEJADO', snapshot.plannedCost],
     ['RESULTADO TEÓRICO', snapshot.theoreticalResult, '', 'RESULTADO ATUAL', snapshot.currentResult],
     ['CARTÃO ATUAL', snapshot.cardCurrent, '', 'CARTÃO (DESPESAS)', snapshot.cardExpenses],
-    ['PATRIMÔNIO', snapshot.netWorth, '', 'LANÇAMENTOS PENDENTES', launchTotal],
+    ['PATRIMÔNIO', snapshot.netWorth, '', 'LANÇAMENTOS FUTUROS', launchTotal],
     ['', '', '', '', ''],
-    ['LANÇAMENTOS PENDENTES', '', '', '', ''],
+    ['LANÇAMENTOS FUTUROS', '', '', '', ''],
     ['Semáforo', 'Vencimento', 'Descrição', 'Valor planejado', 'Competência']
   ];
   if (snapshot.launches.length) {

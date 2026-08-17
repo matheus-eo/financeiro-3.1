@@ -159,7 +159,7 @@ test("Carga inicial de julho: totais, cartão pendente e semáforo autorizado", 
   const cardDetails = [2056, 879, 1480, 1000, 185, 100, 100, 30, 32]
     .map((actual, index) => movement({ ID: `MOV-CARD-${index}`, Tipo: FIN.TYPES.CARD_PURCHASE, "Valor Realizado": actual }));
   const pendingCard = movement({
-    ID: "MOV-CARD-BILL", Descrição: "💳 Cartão", "Valor Planejado": 5237, "Valor Realizado": "",
+    ID: "MOV-CARD-BILL", Tipo: FIN.TYPES.CARD_BILL, Descrição: "💳 Cartão", "Valor Planejado": 5237, "Valor Realizado": "",
     "Possui Vencimento": FIN.YES, "Data de Vencimento": date("2026-08-08"), Pago: FIN.NO,
   });
   const revenues = [
@@ -176,9 +176,7 @@ test("Carga inicial de julho: totais, cartão pendente e semáforo autorizado", 
   assert.equal(snapshot.cardCurrent, 4203);
   assert.equal(snapshot.cardExpenses, 5862);
   assert.equal(snapshot.netWorth, 132000);
-  assert.equal(snapshot.launches.length, 1);
-  assert.equal(snapshot.launches[0].id, "MOV-CARD-BILL");
-  assert.equal(snapshot.launches[0].semaphore, FIN.SEMAPHORE.YELLOW);
+  assert.equal(snapshot.launches.length, 0, "fatura do cartão não deve entrar em Lançamentos Futuros");
 });
 
 test("Atualização de agosto: pagamentos explícitos, cartão independente e lançamentos futuros", () => {
@@ -195,7 +193,7 @@ test("Atualização de agosto: pagamentos explícitos, cartão independente e la
   const cardDetails = [1053, 0, 185, 1000, 185, 0, 0, 0, 32]
     .map((actual, index) => augustMovement({ ID: `MOV-AUG-CARD-${index}`, Tipo: FIN.TYPES.CARD_PURCHASE, "Valor Realizado": actual }));
   const pendingCard = augustMovement({
-    ID: "MOV-AUG-CARD-BILL", Descrição: "Cartão", "Valor Planejado": 5237, "Valor Realizado": "",
+    ID: "MOV-AUG-CARD-BILL", Tipo: FIN.TYPES.CARD_BILL, Descrição: "Cartão", "Valor Planejado": 5237, "Valor Realizado": "",
     "Possui Vencimento": FIN.YES, "Data de Vencimento": date("2026-09-08"), Pago: FIN.NO,
   });
   const revenues = [
@@ -213,8 +211,8 @@ test("Atualização de agosto: pagamentos explícitos, cartão independente e la
   assert.equal(snapshot.cardCurrent, 105);
   assert.equal(snapshot.cardExpenses, 2455);
   assert.equal(snapshot.netWorth, 127000);
-  assert.equal(snapshot.launches.length, 6);
-  assert.equal(snapshot.launches.reduce((sum, launch) => sum + launch.plannedValue, 0), 7377);
+  assert.equal(snapshot.launches.length, 5, "fatura do cartão não deve entrar em Lançamentos Futuros");
+  assert.equal(snapshot.launches.reduce((sum, launch) => sum + launch.plannedValue, 0), 2140);
   assert.ok(snapshot.launches.every((launch) => launch.semaphore === FIN.SEMAPHORE.YELLOW));
   assert.equal(context.calculateSemaphore_(expenses[0], date("2026-08-03")), FIN.SEMAPHORE.GREEN);
   assert.equal(context.calculateSemaphore_(expenses[1], date("2026-08-03")), FIN.SEMAPHORE.GREEN);

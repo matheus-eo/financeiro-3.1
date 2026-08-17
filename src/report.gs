@@ -80,7 +80,7 @@ function buildWhatsAppReport_(snapshot) {
   lines.push('');
   lines.push('💳 *Controle de Saldo*');
   lines.push('💳 *Cartão atual (' + reportDate + ')*: ' + reportMoney_(snapshot.cardCurrent));
-  lines.push('📌 *Lançamentos (' + reportDate + ')*: ' + reportMoney_(launchTotal));
+  lines.push('📌 *Lançamentos Futuros (' + reportDate + ')*: ' + reportMoney_(launchTotal));
   lines.push('');
   lines.push('🧮 *Resultado teórico do mês*');
   lines.push(resultSemaphoreEmoji_(snapshot.theoreticalResult) + ' *Diferença: ' + (snapshot.theoreticalResult >= 0 ? '+ ' : '- ') + reportMoney_(Math.abs(snapshot.theoreticalResult)) + '*');
