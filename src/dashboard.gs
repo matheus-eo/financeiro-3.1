@@ -83,7 +83,7 @@ function refreshDashboard_(tx, snapshot) {
       ]);
     });
   } else {
-    rows.push(['—', '', 'Nenhum lançamento pendente.', '', '']);
+    rows.push(['—', '', 'Nenhum lançamento futuro.', '', '']);
   }
   rows.push(['', '', '', '', '']);
   rows.push(['DETALHAMENTO DO CARTÃO', '', '', '', '']);
