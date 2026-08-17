@@ -41,13 +41,16 @@
       <span>Menu</span>
       <button type="button" id="botao-fechar-menu" class="botao-fechar-menu" aria-label="Fechar menu">✕</button>
     </div>
-    <button type="button" class="menu-item" data-page="cartao">💳 Compra no cartão</button>
-    <button type="button" class="menu-item" data-page="despesa">📝 Registrar despesa</button>
-    <button type="button" class="menu-item" data-page="correcao">🛠️ Corrigir lançamento</button>
-    <button type="button" class="menu-item" data-page="recorrencias">📅 Virar o mês</button>
+    <button type="button" class="menu-item requer-edicao" data-page="cartao">💳 Compra no cartão</button>
+    <button type="button" class="menu-item requer-edicao" data-page="despesa">📝 Registrar despesa</button>
+    <button type="button" class="menu-item requer-edicao" data-page="correcao">🛠️ Corrigir lançamento</button>
+    <button type="button" class="menu-item requer-edicao" data-page="recorrencias">📅 Virar o mês</button>
+    <button type="button" class="menu-item requer-edicao" data-page="patrimonio">🏦 Ajustar patrimônio</button>
     <div class="menu-separador"></div>
     <button type="button" class="menu-item" data-page="dashboard">📊 Dashboard</button>
     <button type="button" class="menu-item" data-page="whatsapp">🟢 Relatório WhatsApp</button>
+    <div class="menu-separador requer-dono"></div>
+    <button type="button" class="menu-item requer-dono" data-page="acesso">⚙️ Configurações de acesso</button>
   </nav>
   <div id="menu-overlay" class="menu-overlay"></div>
 
@@ -66,7 +69,7 @@
         <div class="valor" id="resumo-atual">—</div>
       </div>
       <div class="item">
-        <div class="rotulo">Pendentes</div>
+        <div class="rotulo">Futuros</div>
         <div class="valor" id="resumo-pendentes">—</div>
       </div>
     </section>
@@ -177,6 +180,48 @@
       <div class="mensagem" id="mensagem-recorrencias"></div>
     </section>
 
+    <section class="pagina cartao" data-page="patrimonio">
+      <h2>Ajustar patrimônio</h2>
+      <p class="texto-suave">
+        Cada atualização registra uma nova posição do ativo (cofrinho, fundo imobiliário,
+        emergência, etc.). Para criar um ativo novo, é só digitar um nome ainda não usado.
+      </p>
+      <div id="patrimonio-atual" class="dashboard-conteudo">
+        <p class="texto-suave">Carregando…</p>
+      </div>
+      <form id="form-patrimonio">
+        <label for="descricao-patrimonio">Ativo</label>
+        <input type="text" id="descricao-patrimonio" list="lista-ativos" required placeholder="Ex: Cofrinho Mercadopago">
+        <datalist id="lista-ativos"></datalist>
+
+        <label for="valor-patrimonio">Novo valor (R$)</label>
+        <input type="number" id="valor-patrimonio" required inputmode="decimal" step="0.01" min="0" placeholder="0,00">
+
+        <label for="data-patrimonio">Data</label>
+        <input type="date" id="data-patrimonio" required>
+
+        <label for="observacao-patrimonio">Observação (opcional)</label>
+        <textarea id="observacao-patrimonio" placeholder="Detalhes adicionais"></textarea>
+
+        <button type="submit" class="primario" id="botao-salvar-patrimonio">Salvar posição</button>
+        <div class="mensagem" id="mensagem-patrimonio"></div>
+      </form>
+
+      <div class="divisor"></div>
+
+      <form id="form-cartao-atual">
+        <h3>Cartão Atual</h3>
+        <label for="valor-cartao-atual">Novo valor do Cartão Atual (R$)</label>
+        <input type="number" id="valor-cartao-atual" required inputmode="decimal" step="0.01" min="0" placeholder="0,00">
+
+        <label for="observacao-cartao-atual">Observação (opcional)</label>
+        <textarea id="observacao-cartao-atual" placeholder="Detalhes adicionais"></textarea>
+
+        <button type="submit" class="secundario" id="botao-salvar-cartao-atual">Atualizar Cartão Atual</button>
+        <div class="mensagem" id="mensagem-cartao-atual"></div>
+      </form>
+    </section>
+
     <section class="pagina cartao" data-page="dashboard">
       <h2>Dashboard</h2>
       <div id="dashboard-conteudo" class="dashboard-conteudo">
@@ -189,6 +234,24 @@
       <pre id="whatsapp-conteudo" class="whatsapp-conteudo">Carregando…</pre>
       <button type="button" class="secundario" id="botao-copiar-whatsapp">Copiar relatório</button>
       <div class="mensagem" id="mensagem-whatsapp"></div>
+    </section>
+
+    <section class="pagina cartao" data-page="acesso">
+      <h2>Configurações de acesso</h2>
+      <p class="texto-suave">
+        Só o desenvolvedor (<span id="acesso-dono">—</span>) vê esta tela. Editores têm acesso
+        total (lançar despesas, corrigir, etc.); leitores só veem Dashboard e Relatório WhatsApp.
+      </p>
+      <form id="form-acesso">
+        <label for="acesso-editores">E-mails com acesso total (um por linha)</label>
+        <textarea id="acesso-editores" placeholder="ex: esposa@gmail.com"></textarea>
+
+        <label for="acesso-leitores">E-mails só leitura (um por linha)</label>
+        <textarea id="acesso-leitores" placeholder="ex: contador@gmail.com"></textarea>
+
+        <button type="submit" class="primario" id="botao-salvar-acesso">Salvar acessos</button>
+        <div class="mensagem" id="mensagem-acesso"></div>
+      </form>
     </section>
 
     <p class="rodape-info">Financeiro 3.1 — dados salvos direto na sua planilha</p>

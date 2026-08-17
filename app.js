@@ -246,13 +246,13 @@ async function loadDashboard() {
     html += dashboardLinha_('Cartão (despesas)', formatMoney(d.cardExpenses));
     html += dashboardLinha_('Patrimônio', formatMoney(d.netWorth));
 
-    html += '<div class="secao-titulo">Lançamentos pendentes</div>';
+    html += '<div class="secao-titulo">Lançamentos futuros</div>';
     if (d.launches.length) {
       d.launches.forEach(function(launch) {
         html += dashboardLinha_(launch.dueDate + ' — ' + launch.description, formatMoney(launch.plannedValue));
       });
     } else {
-      html += '<p class="texto-suave">Nenhum lançamento pendente.</p>';
+      html += '<p class="texto-suave">Nenhum lançamento futuro.</p>';
     }
 
     html += '<div class="secao-titulo">Cartão por categoria</div>';
@@ -303,40 +303,174 @@ function setupWhatsAppCopy() {
   });
 }
 
+function abrirMenuLateral_() {
+  document.getElementById('menu-lateral').classList.add('aberto');
+  document.getElementById('menu-overlay').classList.add('visivel');
+}
+
+function fecharMenuLateral_() {
+  document.getElementById('menu-lateral').classList.remove('aberto');
+  document.getElementById('menu-overlay').classList.remove('visivel');
+}
+
+function irParaPagina(pagina) {
+  document.querySelectorAll('.pagina').forEach(function(p) { p.classList.toggle('ativa', p.dataset.page === pagina); });
+  document.querySelectorAll('.menu-item').forEach(function(i) { i.classList.toggle('ativo', i.dataset.page === pagina); });
+  if (pagina === 'dashboard') loadDashboard();
+  if (pagina === 'whatsapp') loadWhatsAppReport();
+  if (pagina === 'patrimonio') loadPatrimonio();
+  if (pagina === 'acesso') loadAccessList();
+  fecharMenuLateral_();
+}
+
 function setupNavigation() {
-  const menu = document.getElementById('menu-lateral');
-  const overlay = document.getElementById('menu-overlay');
-  const botaoMenu = document.getElementById('botao-menu');
-  const botaoFechar = document.getElementById('botao-fechar-menu');
-  const itens = document.querySelectorAll('.menu-item');
-  const paginas = document.querySelectorAll('.pagina');
-
-  function abrirMenu() {
-    menu.classList.add('aberto');
-    overlay.classList.add('visivel');
-  }
-
-  function fecharMenu() {
-    menu.classList.remove('aberto');
-    overlay.classList.remove('visivel');
-  }
-
-  function irPara(pagina) {
-    paginas.forEach(function(p) { p.classList.toggle('ativa', p.dataset.page === pagina); });
-    itens.forEach(function(i) { i.classList.toggle('ativo', i.dataset.page === pagina); });
-    if (pagina === 'dashboard') loadDashboard();
-    if (pagina === 'whatsapp') loadWhatsAppReport();
-    fecharMenu();
-  }
-
-  botaoMenu.addEventListener('click', abrirMenu);
-  botaoFechar.addEventListener('click', fecharMenu);
-  overlay.addEventListener('click', fecharMenu);
-  itens.forEach(function(item) {
-    item.addEventListener('click', function() { irPara(item.dataset.page); });
+  document.getElementById('botao-menu').addEventListener('click', abrirMenuLateral_);
+  document.getElementById('botao-fechar-menu').addEventListener('click', fecharMenuLateral_);
+  document.getElementById('menu-overlay').addEventListener('click', fecharMenuLateral_);
+  document.querySelectorAll('.menu-item').forEach(function(item) {
+    item.addEventListener('click', function() { irParaPagina(item.dataset.page); });
   });
+}
 
-  irPara('cartao');
+// Esconde no menu o que a conta logada não pode usar. A permissão de verdade
+// é sempre checada no servidor — isto é só para não mostrar opções inúteis.
+function applyRole_(session) {
+  document.querySelectorAll('.requer-edicao').forEach(function(el) {
+    el.style.display = session.isEditor ? '' : 'none';
+  });
+  document.querySelectorAll('.requer-dono').forEach(function(el) {
+    el.style.display = session.isOwner ? '' : 'none';
+  });
+}
+
+async function loadSession() {
+  const data = await apiGet('session');
+  applyRole_(data);
+  return data;
+}
+
+async function loadPatrimonio() {
+  const container = document.getElementById('patrimonio-atual');
+  const datalist = document.getElementById('lista-ativos');
+  container.innerHTML = '<p class="texto-suave">Carregando…</p>';
+  try {
+    const data = await apiGet('dashboard');
+    const d = data.dashboard;
+    let html = dashboardLinha_('Cartão atual', formatMoney(d.cardCurrent));
+    html += '<div class="secao-titulo">Posições atuais</div>';
+    if (d.assets.length) {
+      d.assets.forEach(function(asset) {
+        html += dashboardLinha_(asset.description, formatMoney(asset.value));
+      });
+    } else {
+      html += '<p class="texto-suave">Nenhum patrimônio registrado.</p>';
+    }
+    container.innerHTML = html;
+    datalist.innerHTML = d.assets.map(function(asset) {
+      return '<option value="' + asset.description + '"></option>';
+    }).join('');
+  } catch (error) {
+    container.innerHTML = '<p class="mensagem erro">' + error.message + '</p>';
+  }
+}
+
+function setupNetWorthForm() {
+  const dataInput = document.getElementById('data-patrimonio');
+  dataInput.value = todayISO();
+
+  const form = document.getElementById('form-patrimonio');
+  const botaoSalvar = document.getElementById('botao-salvar-patrimonio');
+
+  form.addEventListener('submit', async function(event) {
+    event.preventDefault();
+    botaoSalvar.disabled = true;
+    botaoSalvar.textContent = 'Salvando…';
+    try {
+      const payload = {
+        description: document.getElementById('descricao-patrimonio').value,
+        value: document.getElementById('valor-patrimonio').value,
+        date: dataInput.value,
+        note: document.getElementById('observacao-patrimonio').value
+      };
+      await apiPost('updateNetWorth', payload);
+      showMessage('mensagem-patrimonio', 'Posição de patrimônio salva.', false);
+      form.reset();
+      dataInput.value = todayISO();
+      loadPatrimonio();
+      loadSnapshot();
+    } catch (error) {
+      showMessage('mensagem-patrimonio', error.message, true);
+    } finally {
+      botaoSalvar.disabled = false;
+      botaoSalvar.textContent = 'Salvar posição';
+    }
+  });
+}
+
+function setupCardCurrentForm() {
+  const form = document.getElementById('form-cartao-atual');
+  const botaoSalvar = document.getElementById('botao-salvar-cartao-atual');
+
+  form.addEventListener('submit', async function(event) {
+    event.preventDefault();
+    botaoSalvar.disabled = true;
+    botaoSalvar.textContent = 'Salvando…';
+    try {
+      const payload = {
+        value: document.getElementById('valor-cartao-atual').value,
+        note: document.getElementById('observacao-cartao-atual').value
+      };
+      await apiPost('updateCardCurrent', payload);
+      showMessage('mensagem-cartao-atual', 'Cartão Atual atualizado.', false);
+      form.reset();
+      loadPatrimonio();
+      loadSnapshot();
+    } catch (error) {
+      showMessage('mensagem-cartao-atual', error.message, true);
+    } finally {
+      botaoSalvar.disabled = false;
+      botaoSalvar.textContent = 'Atualizar Cartão Atual';
+    }
+  });
+}
+
+async function loadAccessList() {
+  const editorsField = document.getElementById('acesso-editores');
+  const viewersField = document.getElementById('acesso-leitores');
+  try {
+    const data = await apiGet('accessList');
+    document.getElementById('acesso-dono').textContent = data.owner;
+    editorsField.value = data.editors.join('\n');
+    viewersField.value = data.viewers.join('\n');
+  } catch (error) {
+    showMessage('mensagem-acesso', error.message, true);
+  }
+}
+
+function setupAccessForm() {
+  const form = document.getElementById('form-acesso');
+  const botaoSalvar = document.getElementById('botao-salvar-acesso');
+
+  form.addEventListener('submit', async function(event) {
+    event.preventDefault();
+    botaoSalvar.disabled = true;
+    botaoSalvar.textContent = 'Salvando…';
+    try {
+      const payload = {
+        editors: document.getElementById('acesso-editores').value.split('\n'),
+        viewers: document.getElementById('acesso-leitores').value.split('\n')
+      };
+      const result = await apiPost('updateAccessList', payload);
+      showMessage('mensagem-acesso', 'Acessos atualizados.', false);
+      document.getElementById('acesso-editores').value = result.editors.join('\n');
+      document.getElementById('acesso-leitores').value = result.viewers.join('\n');
+    } catch (error) {
+      showMessage('mensagem-acesso', error.message, true);
+    } finally {
+      botaoSalvar.disabled = false;
+      botaoSalvar.textContent = 'Salvar acessos';
+    }
+  });
 }
 
 function setupRecurrences() {
@@ -368,12 +502,19 @@ function setupServiceWorker() {
   }
 }
 
-function showApp() {
+async function showApp() {
   document.getElementById('tela-login').style.display = 'none';
   document.getElementById('app').style.display = 'block';
+  let session;
+  try {
+    session = await loadSession();
+  } catch (error) {
+    return; // apiGet já mandou de volta pra tela de login quando é erro de autenticação.
+  }
   loadCategories();
   loadSnapshot();
   loadRecentMovements();
+  irParaPagina(session.isEditor ? 'cartao' : 'dashboard');
 }
 
 function showLogin(message) {
@@ -394,6 +535,9 @@ function handleGoogleSignIn(response) {
 setupForm();
 setupCardPurchaseForm();
 setupCorrectionForm();
+setupNetWorthForm();
+setupCardCurrentForm();
+setupAccessForm();
 setupRecurrences();
 setupWhatsAppCopy();
 setupNavigation();
