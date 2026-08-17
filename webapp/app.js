@@ -505,11 +505,16 @@ function setupServiceWorker() {
 async function showApp() {
   document.getElementById('tela-login').style.display = 'none';
   document.getElementById('app').style.display = 'block';
-  let session;
+  // Acesso total por padrão: se a checagem de sessão falhar (ex: backend do
+  // Apps Script desatualizado, sem a ação "session"), o app não trava —
+  // segue funcionando, e cada ação continua protegida no servidor mesmo assim.
+  let session = { email: '', isOwner: false, isEditor: true };
   try {
     session = await loadSession();
   } catch (error) {
-    return; // apiGet já mandou de volta pra tela de login quando é erro de autenticação.
+    if (isAuthError_(error.message)) return; // apiGet já mandou de volta pra tela de login.
+    document.getElementById('competencia-atual').textContent =
+      'Não foi possível confirmar seu nível de acesso (' + error.message + ').';
   }
   loadCategories();
   loadSnapshot();
