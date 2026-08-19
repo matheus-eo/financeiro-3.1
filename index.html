@@ -42,11 +42,13 @@
       <button type="button" id="botao-fechar-menu" class="botao-fechar-menu" aria-label="Fechar menu">✕</button>
     </div>
     <button type="button" class="menu-item requer-edicao" data-page="cartao">💳 Compra no cartão</button>
+    <button type="button" class="menu-item requer-edicao" data-page="correcao">🛠️ Corrigir lançamento cartão</button>
+    <div class="menu-separador requer-edicao"></div>
     <button type="button" class="menu-item requer-edicao" data-page="despesa">📝 Registrar despesa</button>
-    <button type="button" class="menu-item requer-edicao" data-page="correcao">🛠️ Corrigir lançamento</button>
     <button type="button" class="menu-item requer-edicao" data-page="planejado">📐 Ajustar valor planejado</button>
+    <div class="menu-separador requer-edicao"></div>
     <button type="button" class="menu-item requer-edicao" data-page="recorrencias">📅 Virar o mês</button>
-    <button type="button" class="menu-item requer-edicao" data-page="patrimonio">🏦 Ajustar patrimônio</button>
+    <button type="button" class="menu-item requer-edicao" data-page="patrimonio">🏦 Ajustar patrimônio/cartão atual</button>
     <button type="button" class="menu-item requer-edicao" data-page="excluir">🗑️ Excluir lançamento</button>
     <div class="menu-separador"></div>
     <button type="button" class="menu-item" data-page="dashboard">📊 Dashboard</button>
@@ -107,6 +109,39 @@
 
     <section class="pagina cartao" data-page="despesa">
       <h2>Registrar despesa</h2>
+
+      <h3>Confirmar despesa do mês</h3>
+      <p class="texto-suave">
+        Escolha uma despesa fixa deste mês (Telefone, Água, Aluguel etc.) ainda não confirmada
+        e informe o valor realmente pago. Isso não cria uma linha nova — só confirma a que já
+        existe, sem duplicar.
+      </p>
+      <form id="form-confirmar-despesa">
+        <label for="despesa-pendente">Despesa</label>
+        <select id="despesa-pendente" required>
+          <option value="">Carregando despesas…</option>
+        </select>
+
+        <label for="valor-pago-despesa">Valor pago (R$)</label>
+        <input type="number" id="valor-pago-despesa" required inputmode="decimal" step="0.01" min="0" placeholder="0,00">
+
+        <label for="data-pagamento-despesa">Data do pagamento</label>
+        <input type="date" id="data-pagamento-despesa" required>
+
+        <label for="observacao-pagamento-despesa">Observação (opcional)</label>
+        <textarea id="observacao-pagamento-despesa" placeholder="Detalhes adicionais"></textarea>
+
+        <button type="submit" class="primario" id="botao-salvar-confirmar-despesa">Confirmar despesa</button>
+        <div class="mensagem" id="mensagem-confirmar-despesa"></div>
+      </form>
+
+      <div class="divisor"></div>
+
+      <h3>Novo registro</h3>
+      <p class="texto-suave">
+        Use só para uma despesa que ainda não existe na lista acima (não é fixa mensal). Se for
+        algo novo que vai se repetir todo mês, avise que eu cadastro na recorrência.
+      </p>
       <form id="form-despesa">
         <label for="descricao">Descrição</label>
         <input type="text" id="descricao" required placeholder="Ex: Supermercado">
@@ -135,17 +170,17 @@
         <label for="observacao">Observação (opcional)</label>
         <textarea id="observacao" placeholder="Detalhes adicionais"></textarea>
 
-        <button type="submit" class="primario" id="botao-salvar">Salvar despesa</button>
+        <button type="submit" class="secundario" id="botao-salvar">Salvar novo registro</button>
         <div class="mensagem" id="mensagem-despesa"></div>
       </form>
     </section>
 
     <section class="pagina cartao" data-page="correcao">
-      <h2>Corrigir lançamento</h2>
+      <h2>Corrigir lançamento cartão</h2>
       <p class="texto-suave">
-        Corrige o valor realizado, a descrição, a categoria ou a observação de uma compra no
-        cartão que você registrou manualmente. Pra despesas, use "Ajustar valor planejado".
-        A alteração fica registrada no Histórico com o motivo.
+        Corrige o valor realizado, a data, a descrição, a categoria ou a observação de uma
+        compra no cartão que você registrou manualmente. Pra despesas, use "Ajustar valor
+        planejado". A alteração fica registrada no Histórico com o motivo.
       </p>
       <form id="form-correcao">
         <label for="lancamento-correcao">Compra no cartão</label>
@@ -156,6 +191,7 @@
         <label for="campo-correcao">Campo a corrigir</label>
         <select id="campo-correcao" required>
           <option value="Valor Realizado">Valor Realizado</option>
+          <option value="Data">Data</option>
           <option value="Descrição">Descrição</option>
           <option value="Categoria">Categoria</option>
           <option value="Observação">Observação</option>
@@ -256,7 +292,7 @@
     </section>
 
     <section class="pagina cartao" data-page="patrimonio">
-      <h2>Ajustar patrimônio</h2>
+      <h2>Ajustar patrimônio/cartão atual</h2>
       <p class="texto-suave">
         Cada atualização registra uma nova posição do ativo (cofrinho, fundo imobiliário,
         emergência, etc.). Para criar um ativo novo, é só digitar um nome ainda não usado.
