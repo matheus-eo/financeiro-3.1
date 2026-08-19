@@ -103,7 +103,7 @@ async function loadRecentMovements() {
     const data = await apiGet('recentMovements');
     select.innerHTML = '<option value="">Selecione…</option>' +
       data.movements.map(function(movement) {
-        return '<option value="' + movement.id + '">' + movementLabel_(movement) + '</option>';
+        return '<option value="' + movement.id + '" data-tipo="' + movement.tipo + '">' + movementLabel_(movement) + '</option>';
       }).join('');
   } catch (error) {
     select.innerHTML = '<option value="">Erro ao carregar lançamentos</option>';
@@ -201,6 +201,18 @@ function setupCardPurchaseForm() {
 function setupCorrectionForm() {
   const form = document.getElementById('form-correcao');
   const botaoSalvar = document.getElementById('botao-salvar-correcao');
+  const selectLancamento = document.getElementById('lancamento-correcao');
+  const selectCampo = document.getElementById('campo-correcao');
+
+  // Compra no cartão sempre nasce com Valor Planejado zerado — quem representa
+  // o valor pago é o Valor Realizado. Sem isso, o padrão "Valor Planejado"
+  // corrige um campo que nunca é usado nos totais, e parece que nada mudou.
+  selectLancamento.addEventListener('change', function() {
+    const opcao = selectLancamento.selectedOptions[0];
+    if (opcao && opcao.dataset.tipo === 'COMPRA_CARTAO') {
+      selectCampo.value = 'Valor Realizado';
+    }
+  });
 
   form.addEventListener('submit', async function(event) {
     event.preventDefault();
