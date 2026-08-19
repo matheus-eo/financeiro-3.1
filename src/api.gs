@@ -106,8 +106,11 @@ function doGet(e) {
     }
     if (action === 'recentMovements') {
       var competence = e.parameter.competence || getActiveCompetence_();
+      var scope = e.parameter.scope || 'all';
       var movements = findRecords_(FIN.SHEETS.MOVEMENTS, function(m) {
-        return m.Competência === competence && m.Tipo !== FIN.TYPES.REVENUE;
+        if (m.Competência !== competence || m.Tipo === FIN.TYPES.REVENUE) return false;
+        if (scope === 'manual' && m.Origem !== FIN.ORIGINS.FORM) return false;
+        return true;
       }).sort(function(a, b) {
         return new Date(b['Criado Em']).getTime() - new Date(a['Criado Em']).getTime();
       }).slice(0, 25).map(function(m) {

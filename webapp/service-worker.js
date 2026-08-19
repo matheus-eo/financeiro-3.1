@@ -1,4 +1,4 @@
-const CACHE_NAME = 'financeiro31-v11';
+const CACHE_NAME = 'financeiro31-v12';
 const APP_SHELL = ['./', './index.html', './style.css', './app.js', './manifest.json', './icon.svg'];
 
 self.addEventListener('install', function(event) {

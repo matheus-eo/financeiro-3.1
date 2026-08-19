@@ -29,8 +29,13 @@ function todayISO() {
   return local.toISOString().slice(0, 10);
 }
 
-async function apiGet(action) {
-  const url = API_URL + '?action=' + encodeURIComponent(action) + '&idToken=' + encodeURIComponent(idToken);
+async function apiGet(action, params) {
+  let url = API_URL + '?action=' + encodeURIComponent(action) + '&idToken=' + encodeURIComponent(idToken);
+  if (params) {
+    Object.keys(params).forEach(function(key) {
+      url += '&' + encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
+    });
+  }
   const response = await fetch(url);
   const data = await response.json();
   if (!data.ok) {
@@ -100,10 +105,23 @@ function movementLabel_(movement) {
 async function loadRecentMovements() {
   const select = document.getElementById('lancamento-correcao');
   try {
-    const data = await apiGet('recentMovements');
+    const data = await apiGet('recentMovements', { scope: 'manual' });
     select.innerHTML = '<option value="">Selecione…</option>' +
       data.movements.map(function(movement) {
-        return '<option value="' + movement.id + '" data-tipo="' + movement.tipo + '">' + movementLabel_(movement) + '</option>';
+        return '<option value="' + movement.id + '">' + movementLabel_(movement) + '</option>';
+      }).join('');
+  } catch (error) {
+    select.innerHTML = '<option value="">Erro ao carregar lançamentos</option>';
+  }
+}
+
+async function loadPlannedMovements() {
+  const select = document.getElementById('lancamento-planejado');
+  try {
+    const data = await apiGet('recentMovements', { scope: 'all' });
+    select.innerHTML = '<option value="">Selecione…</option>' +
+      data.movements.map(function(movement) {
+        return '<option value="' + movement.id + '">' + movementLabel_(movement) + '</option>';
       }).join('');
   } catch (error) {
     select.innerHTML = '<option value="">Erro ao carregar lançamentos</option>';
@@ -201,18 +219,6 @@ function setupCardPurchaseForm() {
 function setupCorrectionForm() {
   const form = document.getElementById('form-correcao');
   const botaoSalvar = document.getElementById('botao-salvar-correcao');
-  const selectLancamento = document.getElementById('lancamento-correcao');
-  const selectCampo = document.getElementById('campo-correcao');
-
-  // Compra no cartão sempre nasce com Valor Planejado zerado — quem representa
-  // o valor pago é o Valor Realizado. Sem isso, o padrão "Valor Planejado"
-  // corrige um campo que nunca é usado nos totais, e parece que nada mudou.
-  selectLancamento.addEventListener('change', function() {
-    const opcao = selectLancamento.selectedOptions[0];
-    if (opcao && opcao.dataset.tipo === 'COMPRA_CARTAO') {
-      selectCampo.value = 'Valor Realizado';
-    }
-  });
 
   form.addEventListener('submit', async function(event) {
     event.preventDefault();
@@ -235,6 +241,35 @@ function setupCorrectionForm() {
     } finally {
       botaoSalvar.disabled = false;
       botaoSalvar.textContent = 'Salvar correção';
+    }
+  });
+}
+
+function setupPlannedValueForm() {
+  const form = document.getElementById('form-planejado');
+  const botaoSalvar = document.getElementById('botao-salvar-planejado');
+
+  form.addEventListener('submit', async function(event) {
+    event.preventDefault();
+    botaoSalvar.disabled = true;
+    botaoSalvar.textContent = 'Salvando…';
+    try {
+      const payload = {
+        movementId: document.getElementById('lancamento-planejado').value,
+        field: 'Valor Planejado',
+        newValue: document.getElementById('novo-valor-planejado').value,
+        reason: document.getElementById('motivo-planejado').value
+      };
+      const result = await apiPost('correctMovement', payload);
+      renderSnapshot(result.snapshot);
+      showMessage('mensagem-planejado', 'Valor planejado atualizado.', false);
+      form.reset();
+      loadPlannedMovements();
+    } catch (error) {
+      showMessage('mensagem-planejado', error.message, true);
+    } finally {
+      botaoSalvar.disabled = false;
+      botaoSalvar.textContent = 'Salvar valor planejado';
     }
   });
 }
@@ -334,6 +369,7 @@ function irParaPagina(pagina) {
   if (pagina === 'patrimonio') loadPatrimonio();
   if (pagina === 'acesso') loadAccessList();
   if (pagina === 'correcao') loadRecentMovements();
+  if (pagina === 'planejado') loadPlannedMovements();
   fecharMenuLateral_();
 }
 
@@ -553,6 +589,7 @@ function handleGoogleSignIn(response) {
 setupForm();
 setupCardPurchaseForm();
 setupCorrectionForm();
+setupPlannedValueForm();
 setupNetWorthForm();
 setupCardCurrentForm();
 setupAccessForm();
