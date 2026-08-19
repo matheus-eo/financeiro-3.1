@@ -69,6 +69,12 @@ function jsonOutput_(payload) {
 
 function snapshotForApi_() {
   var snapshot = getFinancialSnapshot_(getActiveCompetence_());
+  // Resultado previsto: o resultado atual já descontado do que ainda falta
+  // pagar (lançamentos futuros) e do que já está gasto no cartão e ainda
+  // vai virar fatura (Cartão Atual) — uma visão mais conservadora do saldo.
+  var launchesTotal = snapshot.launches.reduce(function(sum, launch) {
+    return sum + valueOrZero_(launch.plannedValue);
+  }, 0);
   return {
     competence: snapshot.competence,
     entries: snapshot.entries,
@@ -78,6 +84,7 @@ function snapshotForApi_() {
     cardCurrent: snapshot.cardCurrent,
     cardExpenses: snapshot.cardExpenses,
     netWorth: snapshot.netWorth,
+    forecastResult: snapshot.currentResult - (launchesTotal + snapshot.cardCurrent),
     launches: snapshot.launches.map(function(launch) {
       return {
         description: launch.description,
@@ -113,7 +120,9 @@ function doGet(e) {
       // competência, então corrigi-la diretamente não teria efeito algum.
       var movements = findRecords_(FIN.SHEETS.MOVEMENTS, function(m) {
         if (m.Competência !== competence || m.Tipo === FIN.TYPES.CARD_BILL) return false;
-        if (scope !== 'deletable' && m.Tipo === FIN.TYPES.REVENUE) return false;
+        // Entradas ficam de fora por padrão pra não misturar com despesas/cartão,
+        // exceto quando explicitamente pedidas (Corrigir entrada) ou pra exclusão.
+        if (scope !== 'deletable' && tipoFilter !== FIN.TYPES.REVENUE && m.Tipo === FIN.TYPES.REVENUE) return false;
         if (scope === 'manual' && m.Origem !== FIN.ORIGINS.FORM) return false;
         // Despesas fixas do mês ainda não confirmadas (pra "Confirmar despesa do mês").
         if (scope === 'pending' && (m.Tipo !== FIN.TYPES.EXPENSE || isPaymentConfirmed_(m.Pago))) return false;
@@ -221,6 +230,21 @@ function doPost(e) {
       };
       var cardResult = executeFinancialCommand_(cardCommand);
       return jsonOutput_({ ok: true, id: cardResult.movement.ID, snapshot: snapshotForApi_() });
+    }
+
+    if (action === 'registerRevenue') {
+      requireEditor_(auth);
+      var revenueCommand = {
+        operation: FIN.OPERATIONS.REVENUE,
+        competence: body.competence || getActiveCompetence_(),
+        date: body.date ? new Date(body.date) : now_(),
+        category: body.category,
+        description: body.description,
+        value: body.value,
+        note: body.note || ''
+      };
+      var revenueResult = executeFinancialCommand_(revenueCommand);
+      return jsonOutput_({ ok: true, id: revenueResult.movement.ID, snapshot: snapshotForApi_() });
     }
 
     if (action === 'registerPayment') {
