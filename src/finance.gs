@@ -40,15 +40,20 @@ function isPayableExpense_(movement) {
   return movement && (movement.Tipo === FIN.TYPES.EXPENSE || movement.Tipo === FIN.TYPES.CARD_BILL);
 }
 
-function getExpensePresentationRows_(period, referenceDate) {
+// A fatura do cartão (FATURA_CARTAO) nunca guarda seu próprio valor
+// planejado para fins de cálculo: ele é sempre a soma do planejado das
+// compras no cartão (cardPlannedTotal) da mesma competência, para a fatura
+// nunca virar um segundo número desencontrado do detalhamento por categoria.
+function getExpensePresentationRows_(period, referenceDate, cardPlannedTotal) {
   return period.filter(function(movement) {
     return isPayableExpense_(movement) && isAffirmative_(movement['Possui Vencimento']);
   }).map(function(movement) {
+    var isCardBill = movement.Tipo === FIN.TYPES.CARD_BILL;
     return {
       id: movement.ID,
       description: movement.Descrição,
       dueDate: movement['Data de Vencimento'],
-      plannedValue: valueOrZero_(movement['Valor Planejado']),
+      plannedValue: isCardBill ? valueOrZero_(cardPlannedTotal) : valueOrZero_(movement['Valor Planejado']),
       realizedValue: asNumber_(movement['Valor Realizado']),
       paidValue: asNumber_(movement['Valor Pago']),
       paid: isPaymentConfirmed_(movement.Pago),
@@ -92,25 +97,31 @@ function calculateFinancialSnapshot_(competence, movements, cardCurrent, current
   var cardExpenses = 0;
   var cardByCategory = {};
 
+  var cardPlannedTotal = 0;
+
   period.forEach(function(movement) {
     if (movement.Tipo === FIN.TYPES.REVENUE) {
       entries += valueOrZero_(movement['Valor Realizado']);
       return;
     }
-    if (movement.Tipo === FIN.TYPES.EXPENSE || movement.Tipo === FIN.TYPES.CARD_BILL || movement.Tipo === FIN.TYPES.CARD_PURCHASE) {
-      plannedCost += valueOrZero_(movement['Valor Planejado']);
-    }
     if (movement.Tipo === FIN.TYPES.EXPENSE) {
+      plannedCost += valueOrZero_(movement['Valor Planejado']);
       nonCardActualExpenses += valueOrZero_(movement['Valor Realizado']);
       return;
     }
     if (movement.Tipo === FIN.TYPES.CARD_PURCHASE) {
       var cardValue = valueOrZero_(movement['Valor Realizado']);
+      cardPlannedTotal += valueOrZero_(movement['Valor Planejado']);
       cardExpenses += cardValue;
       var category = movement.Categoria || 'Sem categoria';
       cardByCategory[category] = (cardByCategory[category] || 0) + cardValue;
     }
+    // FATURA_CARTAO (CARD_BILL) nunca soma seu próprio Valor Planejado aqui:
+    // ele é sempre igual a cardPlannedTotal (ver abaixo), evitando contar a
+    // mesma fatura duas vezes junto com o detalhamento por categoria.
   });
+
+  plannedCost += cardPlannedTotal;
 
   var assetTotal = (currentAssets || []).reduce(function(sum, asset) {
     return sum + valueOrZero_(asset.Valor);
@@ -133,7 +144,7 @@ function calculateFinancialSnapshot_(competence, movements, cardCurrent, current
     launches: launches,
     cardByCategory: cardByCategory,
     revenues: getRevenuePresentationRows_(period),
-    expenses: getExpensePresentationRows_(period, referenceDate || now_()),
+    expenses: getExpensePresentationRows_(period, referenceDate || now_(), cardPlannedTotal),
     cardBreakdown: cardBreakdown,
     assets: currentAssets || []
   };

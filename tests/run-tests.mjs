@@ -166,8 +166,11 @@ test("Carga inicial de julho: totais, cartão pendente e semáforo autorizado", 
     ID: `MOV-PAID-${index}`, "Valor Planejado": planned, "Valor Realizado": actual,
     "Possui Vencimento": FIN.YES, "Data de Vencimento": date(dueDate), Pago: FIN.YES,
   }));
+  const cardPlanned = [1500, 700, 600, 1000, 185, 100, 100, 100, 32];
   const cardDetails = [2056, 879, 1480, 1000, 185, 100, 100, 30, 32]
-    .map((actual, index) => movement({ ID: `MOV-CARD-${index}`, Tipo: FIN.TYPES.CARD_PURCHASE, "Valor Realizado": actual }));
+    .map((actual, index) => movement({
+      ID: `MOV-CARD-${index}`, Tipo: FIN.TYPES.CARD_PURCHASE, "Valor Planejado": cardPlanned[index], "Valor Realizado": actual
+    }));
   const pendingCard = movement({
     ID: "MOV-CARD-BILL", Tipo: FIN.TYPES.CARD_BILL, Descrição: "💳 Cartão", "Valor Planejado": 5237, "Valor Realizado": "",
     "Possui Vencimento": FIN.YES, "Data de Vencimento": date("2026-08-08"), Pago: FIN.NO,
@@ -180,8 +183,11 @@ test("Carga inicial de julho: totais, cartão pendente e semáforo autorizado", 
     "2026-07", [...paidExpenses, ...cardDetails, pendingCard, ...revenues], 4203,
     [{ Valor: 98000 }, { Valor: 24000 }, { Valor: 10000 }], date("2026-07-29")
   );
-  assert.equal(snapshot.plannedCost, 7762);
-  assert.equal(snapshot.theoreticalResult, -162);
+  // Custo Planejado = despesas (2525) + soma do detalhamento do cartão (4317).
+  // O Valor Planejado gravado na própria fatura (5237) nunca é somado — ele
+  // é só um número histórico independente e seria dupla contagem.
+  assert.equal(snapshot.plannedCost, 6842);
+  assert.equal(snapshot.theoreticalResult, 758);
   assert.equal(snapshot.currentResult, -534);
   assert.equal(snapshot.cardCurrent, 4203);
   assert.equal(snapshot.cardExpenses, 5862);
@@ -200,8 +206,11 @@ test("Atualização de agosto: pagamentos explícitos, cartão independente e la
     ID: `MOV-AUG-EXP-${index}`, Descrição: description, "Valor Planejado": planned, "Valor Realizado": actual,
     "Possui Vencimento": FIN.YES, "Data de Vencimento": date(dueDate), Pago: paid,
   }));
+  const cardPlanned = [1500, 700, 600, 1000, 185, 100, 100, 100, 32];
   const cardDetails = [1053, 0, 185, 1000, 185, 0, 0, 0, 32]
-    .map((actual, index) => augustMovement({ ID: `MOV-AUG-CARD-${index}`, Tipo: FIN.TYPES.CARD_PURCHASE, "Valor Realizado": actual }));
+    .map((actual, index) => augustMovement({
+      ID: `MOV-AUG-CARD-${index}`, Tipo: FIN.TYPES.CARD_PURCHASE, "Valor Planejado": cardPlanned[index], "Valor Realizado": actual
+    }));
   const pendingCard = augustMovement({
     ID: "MOV-AUG-CARD-BILL", Tipo: FIN.TYPES.CARD_BILL, Descrição: "Cartão", "Valor Planejado": 5237, "Valor Realizado": "",
     "Possui Vencimento": FIN.YES, "Data de Vencimento": date("2026-09-08"), Pago: FIN.NO,
@@ -215,8 +224,8 @@ test("Atualização de agosto: pagamentos explícitos, cartão independente e la
     [{ Valor: 93000 }, { Valor: 24000 }, { Valor: 10000 }], date("2026-08-03"),
   );
   assert.equal(snapshot.entries, 7600);
-  assert.equal(snapshot.plannedCost, 7762);
-  assert.equal(snapshot.theoreticalResult, -162);
+  assert.equal(snapshot.plannedCost, 6842);
+  assert.equal(snapshot.theoreticalResult, 758);
   assert.equal(snapshot.currentResult, 4805);
   assert.equal(snapshot.cardCurrent, 105);
   assert.equal(snapshot.cardExpenses, 2455);
@@ -238,7 +247,7 @@ test("Fatura quitada do cartão não entra duas vezes no Resultado Atual", () =>
     "Data do Pagamento": date("2026-08-02"), Pago: FIN.YES,
   });
   const cardPurchase = movement({
-    ID: "MOV-CARD-PAID", Tipo: FIN.TYPES.CARD_PURCHASE, "Valor Realizado": 5237,
+    ID: "MOV-CARD-PAID", Tipo: FIN.TYPES.CARD_PURCHASE, "Valor Planejado": 5237, "Valor Realizado": 5237,
   });
   const revenue = movement({
     ID: "MOV-REV-PAID", Tipo: FIN.TYPES.REVENUE, "Valor Realizado": 7600,

@@ -107,8 +107,11 @@ function doGet(e) {
     if (action === 'recentMovements') {
       var competence = e.parameter.competence || getActiveCompetence_();
       var scope = e.parameter.scope || 'all';
+      // A fatura do cartão (FATURA_CARTAO) não aparece pra edição: seu
+      // planejado é sempre derivado da soma das compras no cartão da
+      // competência, então corrigi-la diretamente não teria efeito algum.
       var movements = findRecords_(FIN.SHEETS.MOVEMENTS, function(m) {
-        if (m.Competência !== competence || m.Tipo === FIN.TYPES.REVENUE) return false;
+        if (m.Competência !== competence || m.Tipo === FIN.TYPES.REVENUE || m.Tipo === FIN.TYPES.CARD_BILL) return false;
         if (scope === 'manual' && m.Origem !== FIN.ORIGINS.FORM) return false;
         return true;
       }).sort(function(a, b) {
