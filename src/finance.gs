@@ -44,19 +44,24 @@ function isPayableExpense_(movement) {
 // planejado para fins de cálculo: ele é sempre a soma do planejado das
 // compras no cartão (cardPlannedTotal) da mesma competência, para a fatura
 // nunca virar um segundo número desencontrado do detalhamento por categoria.
-function getExpensePresentationRows_(period, referenceDate, cardPlannedTotal) {
+// O mesmo vale pro realizado: enquanto a fatura não é quitada, o valor
+// realizado exibido é sempre a soma do que já foi gasto no cartão
+// (cardExpenses), não um número gravado avulso na própria linha da fatura —
+// só depois de quitada (Pago = Sim) o valor realmente pago fica congelado.
+function getExpensePresentationRows_(period, referenceDate, cardPlannedTotal, cardExpenses) {
   return period.filter(function(movement) {
     return isPayableExpense_(movement) && isAffirmative_(movement['Possui Vencimento']);
   }).map(function(movement) {
     var isCardBill = movement.Tipo === FIN.TYPES.CARD_BILL;
+    var paid = isPaymentConfirmed_(movement.Pago);
     return {
       id: movement.ID,
       description: movement.Descrição,
       dueDate: movement['Data de Vencimento'],
       plannedValue: isCardBill ? valueOrZero_(cardPlannedTotal) : valueOrZero_(movement['Valor Planejado']),
-      realizedValue: asNumber_(movement['Valor Realizado']),
+      realizedValue: isCardBill && !paid ? valueOrZero_(cardExpenses) : asNumber_(movement['Valor Realizado']),
       paidValue: asNumber_(movement['Valor Pago']),
-      paid: isPaymentConfirmed_(movement.Pago),
+      paid: paid,
       semaphore: calculateSemaphore_(movement, referenceDate)
     };
   }).sort(function(left, right) {
@@ -144,7 +149,7 @@ function calculateFinancialSnapshot_(competence, movements, cardCurrent, current
     launches: launches,
     cardByCategory: cardByCategory,
     revenues: getRevenuePresentationRows_(period),
-    expenses: getExpensePresentationRows_(period, referenceDate || now_(), cardPlannedTotal),
+    expenses: getExpensePresentationRows_(period, referenceDate || now_(), cardPlannedTotal, cardExpenses),
     cardBreakdown: cardBreakdown,
     assets: currentAssets || []
   };

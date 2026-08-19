@@ -265,4 +265,17 @@ test("Fatura quitada do cartão não entra duas vezes no Resultado Atual", () =>
   assert.equal(context.calculateSemaphore_(settledBill, date("2026-08-03")), FIN.SEMAPHORE.GREEN);
 });
 
+test("Fatura do cartão ainda não quitada mostra o realizado somado das compras, não um valor gravado avulso", () => {
+  const openBill = movement({
+    ID: "MOV-BILL-OPEN", Tipo: FIN.TYPES.CARD_BILL, "Valor Planejado": 5237, "Valor Realizado": 3471,
+    "Possui Vencimento": FIN.YES, "Data de Vencimento": date("2026-08-08"), Pago: FIN.NO,
+  });
+  const cardPurchaseA = movement({ ID: "MOV-CARD-A", Tipo: FIN.TYPES.CARD_PURCHASE, "Valor Realizado": 2000 });
+  const cardPurchaseB = movement({ ID: "MOV-CARD-B", Tipo: FIN.TYPES.CARD_PURCHASE, "Valor Realizado": 1694 });
+  const snapshot = context.calculateFinancialSnapshot_("2026-07", [openBill, cardPurchaseA, cardPurchaseB], 0, [], date("2026-08-03"));
+  assert.equal(snapshot.cardExpenses, 3694, "soma das compras no cartão, não o valor avulso gravado na fatura");
+  const billRow = snapshot.expenses.find((expense) => expense.id === "MOV-BILL-OPEN");
+  assert.equal(billRow.realizedValue, 3694, "enquanto não quitada, a fatura exibe o realizado somado das compras");
+});
+
 console.log(`\n${passed} testes aprovados.`);
