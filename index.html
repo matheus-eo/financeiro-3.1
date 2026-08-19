@@ -47,6 +47,7 @@
     <button type="button" class="menu-item requer-edicao" data-page="planejado">📐 Ajustar valor planejado</button>
     <button type="button" class="menu-item requer-edicao" data-page="recorrencias">📅 Virar o mês</button>
     <button type="button" class="menu-item requer-edicao" data-page="patrimonio">🏦 Ajustar patrimônio</button>
+    <button type="button" class="menu-item requer-edicao" data-page="excluir">🗑️ Excluir lançamento</button>
     <div class="menu-separador"></div>
     <button type="button" class="menu-item" data-page="dashboard">📊 Dashboard</button>
     <button type="button" class="menu-item" data-page="whatsapp">🟢 Relatório WhatsApp</button>
@@ -142,13 +143,12 @@
     <section class="pagina cartao" data-page="correcao">
       <h2>Corrigir lançamento</h2>
       <p class="texto-suave">
-        Corrige o valor realizado, a descrição, a categoria ou a observação de um lançamento
-        que você registrou manualmente (o que aparece dentro dos parênteses no Relatório
-        WhatsApp). Pra ajustar o valor planejado, use "Ajustar valor planejado".
+        Corrige o valor realizado, a descrição, a categoria ou a observação de uma compra no
+        cartão que você registrou manualmente. Pra despesas, use "Ajustar valor planejado".
         A alteração fica registrada no Histórico com o motivo.
       </p>
       <form id="form-correcao">
-        <label for="lancamento-correcao">Lançamento</label>
+        <label for="lancamento-correcao">Compra no cartão</label>
         <select id="lancamento-correcao" required>
           <option value="">Carregando lançamentos…</option>
         </select>
@@ -174,16 +174,14 @@
 
     <section class="pagina cartao" data-page="planejado">
       <h2>Ajustar valor planejado</h2>
+
+      <h3>Despesas</h3>
       <p class="texto-suave">
-        Ajusta o valor PLANEJADO (o que aparece FORA dos parênteses no Relatório WhatsApp)
-        de despesas e compras no cartão — inclusive as geradas automaticamente por
-        recorrência. A fatura do cartão não aparece aqui: seu planejado é sempre a soma
-        das compras no cartão da competência, então pra mudá-la, ajuste a categoria certa
-        no detalhamento do cartão. Pra corrigir o valor realizado ou a descrição, use
-        "Corrigir lançamento".
+        Ajusta o valor planejado de uma despesa ou fatura, inclusive as geradas
+        automaticamente por recorrência.
       </p>
       <form id="form-planejado">
-        <label for="lancamento-planejado">Lançamento</label>
+        <label for="lancamento-planejado">Despesa</label>
         <select id="lancamento-planejado" required>
           <option value="">Carregando lançamentos…</option>
         </select>
@@ -197,15 +195,63 @@
         <button type="submit" class="secundario" id="botao-salvar-planejado">Salvar valor planejado</button>
         <div class="mensagem" id="mensagem-planejado"></div>
       </form>
+
+      <div class="divisor"></div>
+
+      <h3>Categorias do cartão</h3>
+      <p class="texto-suave">
+        Ajusta o valor planejado de uma categoria inteira do cartão (Gasolina, Alimentação
+        etc.), não de uma compra específica — as compras do dia a dia não têm planejado
+        próprio. A fatura do cartão (nas Despesas) é sempre a soma dessas categorias.
+      </p>
+      <form id="form-planejado-cartao">
+        <label for="categoria-planejado-cartao">Categoria do cartão</label>
+        <select id="categoria-planejado-cartao" required>
+          <option value="">Carregando categorias…</option>
+        </select>
+
+        <label for="novo-valor-planejado-cartao">Novo valor planejado da categoria (R$)</label>
+        <input type="number" id="novo-valor-planejado-cartao" required inputmode="decimal" step="0.01" min="0" placeholder="0,00">
+
+        <label for="motivo-planejado-cartao">Motivo</label>
+        <textarea id="motivo-planejado-cartao" required placeholder="Ex: Ajuste do orçamento do mês"></textarea>
+
+        <button type="submit" class="secundario" id="botao-salvar-planejado-cartao">Salvar valor da categoria</button>
+        <div class="mensagem" id="mensagem-planejado-cartao"></div>
+      </form>
+    </section>
+
+    <section class="pagina cartao" data-page="excluir">
+      <h2>Excluir lançamento</h2>
+      <p class="texto-suave">
+        Remove um lançamento definitivamente (despesa, compra no cartão ou receita — a
+        fatura do cartão não pode ser excluída aqui). Fica registrado no Histórico com o
+        motivo, mas não tem como desfazer pelo app depois de excluído.
+      </p>
+      <form id="form-excluir">
+        <label for="lancamento-excluir">Lançamento</label>
+        <select id="lancamento-excluir" required>
+          <option value="">Carregando lançamentos…</option>
+        </select>
+
+        <label for="motivo-excluir">Motivo</label>
+        <textarea id="motivo-excluir" required placeholder="Ex: Lançamento duplicado por engano"></textarea>
+
+        <button type="submit" class="secundario" id="botao-salvar-excluir">Excluir lançamento</button>
+        <div class="mensagem" id="mensagem-excluir"></div>
+      </form>
     </section>
 
     <section class="pagina cartao" data-page="recorrencias">
       <h2>Virar o mês</h2>
       <p class="texto-suave">
-        Gera as despesas fixas do mês atual (aluguel, telefone, etc.) prontas para você preencher.
-        Use no início de cada mês, geralmente dia 02 ou 03.
+        Confira abaixo o que vai mudar antes de confirmar. Isso avança a competência ativa
+        e gera as despesas fixas do próximo mês, com os vencimentos recalculados.
       </p>
-      <button type="button" class="secundario" id="botao-recorrencias">Gerar recorrências do mês atual</button>
+      <div id="rollover-preview" class="dashboard-conteudo">
+        <p class="texto-suave">Carregando…</p>
+      </div>
+      <button type="button" class="primario" id="botao-recorrencias">Confirmar virada do mês</button>
       <div class="mensagem" id="mensagem-recorrencias"></div>
     </section>
 
