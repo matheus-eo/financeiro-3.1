@@ -41,7 +41,8 @@ var FIN = {
     CARD_CURRENT: 'Atualizar Cartão Atual',
     NET_WORTH: 'Atualizar patrimônio',
     CORRECTION: 'Corrigir lançamento',
-    PLANNED_VALUE: 'Atualizar valor planejado'
+    PLANNED_VALUE: 'Atualizar valor planejado',
+    DELETE: 'Excluir lançamento'
   },
   SEMAPHORE: { GREEN: 'VERDE', YELLOW: 'AMARELO', RED: 'VERMELHO', NONE: '—' },
   CARD_CURRENT_PREFIX: 'CARTAO_ATUAL::',

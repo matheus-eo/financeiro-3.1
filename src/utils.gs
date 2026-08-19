@@ -66,6 +66,14 @@ function monthEndDate_(competence) {
   return new Date(Number(parts[0]), Number(parts[1]), 0);
 }
 
+function nextCompetence_(competence) {
+  var parts = competence.split('-');
+  var year = Number(parts[0]);
+  var month = Number(parts[1]) + 1;
+  if (month > 12) { month = 1; year += 1; }
+  return String(year) + '-' + String(month).padStart(2, '0');
+}
+
 function dueDateForDay_(competence, day) {
   var numericDay = Number(day);
   var end = monthEndDate_(competence);

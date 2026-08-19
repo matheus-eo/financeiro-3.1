@@ -107,12 +107,15 @@ function doGet(e) {
     if (action === 'recentMovements') {
       var competence = e.parameter.competence || getActiveCompetence_();
       var scope = e.parameter.scope || 'all';
+      var tipoFilter = e.parameter.tipo || '';
       // A fatura do cartão (FATURA_CARTAO) não aparece pra edição: seu
       // planejado é sempre derivado da soma das compras no cartão da
       // competência, então corrigi-la diretamente não teria efeito algum.
       var movements = findRecords_(FIN.SHEETS.MOVEMENTS, function(m) {
-        if (m.Competência !== competence || m.Tipo === FIN.TYPES.REVENUE || m.Tipo === FIN.TYPES.CARD_BILL) return false;
+        if (m.Competência !== competence || m.Tipo === FIN.TYPES.CARD_BILL) return false;
+        if (scope !== 'deletable' && m.Tipo === FIN.TYPES.REVENUE) return false;
         if (scope === 'manual' && m.Origem !== FIN.ORIGINS.FORM) return false;
+        if (tipoFilter && m.Tipo !== tipoFilter) return false;
         return true;
       }).sort(function(a, b) {
         return new Date(b['Criado Em']).getTime() - new Date(a['Criado Em']).getTime();
@@ -123,6 +126,13 @@ function doGet(e) {
         };
       });
       return jsonOutput_({ ok: true, movements: movements });
+    }
+    if (action === 'cardCategories') {
+      var cardSnapshot = getFinancialSnapshot_(getActiveCompetence_());
+      return jsonOutput_({ ok: true, categories: cardSnapshot.cardBreakdown });
+    }
+    if (action === 'monthRolloverPreview') {
+      return jsonOutput_({ ok: true, preview: buildMonthRolloverPreview_() });
     }
     if (action === 'dashboard') {
       var dashboardSnapshot = getFinancialSnapshot_(getActiveCompetence_());
@@ -220,6 +230,48 @@ function doPost(e) {
       };
       var correctionResult = executeFinancialCommand_(correctionCommand);
       return jsonOutput_({ ok: true, id: correctionResult.movement.ID, snapshot: snapshotForApi_() });
+    }
+
+    if (action === 'deleteMovement') {
+      requireEditor_(auth);
+      var deleteCommand = {
+        operation: FIN.OPERATIONS.DELETE,
+        movementId: body.movementId,
+        reason: body.reason
+      };
+      executeFinancialCommand_(deleteCommand);
+      return jsonOutput_({ ok: true, snapshot: snapshotForApi_() });
+    }
+
+    if (action === 'setCardCategoryPlanned') {
+      requireEditor_(auth);
+      var categoryLock = getFinanceLock_();
+      categoryLock.waitLock(30000);
+      var categoryTx = new FinanceTransaction_();
+      try {
+        var categoryCompetence = body.competence || getActiveCompetence_();
+        var categoryReason = requireText_(body.reason, 'Motivo');
+        var categoryAmount = requireAmount_(body.value, 'Novo valor planejado da categoria');
+        setCardCategoryPlanned_(categoryTx, categoryCompetence, requireText_(body.category, 'Categoria'), categoryAmount, categoryReason);
+        refreshAllVisualizations_(categoryTx);
+        categoryTx.commit();
+        return jsonOutput_({ ok: true, snapshot: snapshotForApi_() });
+      } catch (innerError) {
+        categoryTx.rollback();
+        appendFailureHistory_('Ajustar valor planejado (categoria do cartão)', innerError);
+        throw innerError;
+      } finally {
+        categoryLock.releaseLock();
+      }
+    }
+
+    if (action === 'monthRollover') {
+      requireEditor_(auth);
+      var rollover = rolloverToNextCompetence_();
+      return jsonOutput_({
+        ok: true, fromCompetence: rollover.fromCompetence, toCompetence: rollover.toCompetence,
+        generated: rollover.generated, snapshot: snapshotForApi_()
+      });
     }
 
     if (action === 'updateNetWorth') {

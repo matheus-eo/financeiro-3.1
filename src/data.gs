@@ -160,6 +160,15 @@ FinanceTransaction_.prototype.setRow = function(sheet, rowNumber, values) {
   this.undoActions_.push(function() { sheet.getRange(rowNumber, 1, 1, previous.length).setValues([previous]); });
 };
 
+FinanceTransaction_.prototype.deleteRow = function(sheet, rowNumber) {
+  var values = sheet.getRange(rowNumber, 1, 1, sheet.getLastColumn()).getValues()[0];
+  sheet.deleteRow(rowNumber);
+  this.undoActions_.push(function() {
+    sheet.insertRowBefore(rowNumber);
+    sheet.getRange(rowNumber, 1, 1, values.length).setValues([values]);
+  });
+};
+
 FinanceTransaction_.prototype.replaceView = function(sheet, values) {
   var oldRows = Math.max(sheet.getLastRow(), 1);
   var oldColumns = Math.max(sheet.getLastColumn(), 1);

@@ -145,6 +145,11 @@ test("Recorrência: vencimento 31 é limitado ao último dia do mês", () => {
   assert.equal(context.formatDate_(context.dueDateForDay_("2026-02", 31), "yyyy-MM-dd"), "2026-02-28");
 });
 
+test("Virar o mês: próxima competência avança mês e ano corretamente", () => {
+  assert.equal(context.nextCompetence_("2026-08"), "2026-09");
+  assert.equal(context.nextCompetence_("2026-12"), "2027-01");
+});
+
 test("Validação de competência aceita somente AAAA-MM válido", () => {
   assert.equal(context.isValidCompetence_("2026-07"), true);
   assert.equal(context.isValidCompetence_("2026-13"), false);

@@ -42,6 +42,7 @@ function applyCommand_(tx, command) {
     case FIN.OPERATIONS.NET_WORTH: return updateNetWorth_(tx, command);
     case FIN.OPERATIONS.CORRECTION: return correctMovement_(tx, command);
     case FIN.OPERATIONS.PLANNED_VALUE: return updatePlannedValue_(tx, command);
+    case FIN.OPERATIONS.DELETE: return deleteMovement_(tx, command);
     default: throw new Error('Operação sem regra de processamento: ' + command.operation);
   }
 }
@@ -236,6 +237,43 @@ function correctMovement_(tx, command) {
   movement['Atualizado Em'] = makeTimestamp_();
   updateRecord_(tx, FIN.SHEETS.MOVEMENTS, movement);
   return { movement: movement, history: { operation: command.operation, table: FIN.SHEETS.MOVEMENTS, recordId: movement.ID, previous: previous, next: movement } };
+}
+
+function deleteMovement_(tx, command) {
+  var id = extractSelectionId_(requireText_(command.movementId, 'Registro'));
+  var movement = findRecordById_(FIN.SHEETS.MOVEMENTS, id);
+  assert_(movement, 'Movimentação não encontrada: ' + id + '.');
+  var reason = requireText_(command.reason, 'Motivo');
+  tx.deleteRow(getSheet_(FIN.SHEETS.MOVEMENTS), movement.__row);
+  return {
+    history: {
+      operation: command.operation, table: FIN.SHEETS.MOVEMENTS, recordId: movement.ID,
+      previous: movement, next: { excluído: true, motivo: reason }
+    }
+  };
+}
+
+// Ajusta o planejado da categoria inteira do cartão: o lançamento mais
+// recente da categoria vira o "portador" do total informado, e o planejado
+// dos demais é zerado — assim a soma do Detalhamento do Cartão nunca
+// desencontra do valor que o usuário definiu para a categoria.
+function setCardCategoryPlanned_(tx, competence, category, amount, reason) {
+  var movements = findRecords_(FIN.SHEETS.MOVEMENTS, function(m) {
+    return m.Competência === competence && m.Tipo === FIN.TYPES.CARD_PURCHASE && normalizeKey_(m.Categoria) === normalizeKey_(category);
+  });
+  assert_(movements.length > 0, 'Nenhuma compra no cartão encontrada para a categoria ' + category + ' nesta competência.');
+  movements.sort(function(a, b) { return new Date(b['Criado Em']).getTime() - new Date(a['Criado Em']).getTime(); });
+  movements.forEach(function(movement, index) {
+    var previous = deepCopy_(movement);
+    movement['Valor Planejado'] = index === 0 ? amount : 0;
+    movement.Observação = (movement.Observação ? movement.Observação + ' | ' : '') + 'Correção: ' + reason;
+    movement['Atualizado Em'] = makeTimestamp_();
+    updateRecord_(tx, FIN.SHEETS.MOVEMENTS, movement);
+    appendHistory_(tx, {
+      operation: 'Ajustar valor planejado (categoria do cartão)', table: FIN.SHEETS.MOVEMENTS,
+      recordId: movement.ID, previous: previous, next: movement
+    });
+  });
 }
 
 function updatePlannedValue_(tx, command) {

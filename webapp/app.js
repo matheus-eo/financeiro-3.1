@@ -96,19 +96,31 @@ async function loadCategories() {
   }
 }
 
-function movementLabel_(movement) {
+function cardPurchaseLabel_(movement) {
+  return movement.description + ' — ' + formatMoney(movement.realizedValue);
+}
+
+function expenseLabel_(movement) {
   const planned = formatMoney(movement.plannedValue);
   const realized = movement.realizedValue === '' || movement.realizedValue === null ? '—' : formatMoney(movement.realizedValue);
-  return movement.description + ' — Plan.: ' + planned + ' / Real.: ' + realized + ' (' + movement.tipo + ')';
+  return movement.description + ' — Plan.: ' + planned + ' / Real.: ' + realized;
+}
+
+const DELETE_TIPO_NOMES_ = { DESPESA: 'Despesa', COMPRA_CARTAO: 'Compra no cartão', RECEITA: 'Receita', AJUSTE: 'Ajuste' };
+
+function deleteLabel_(movement) {
+  const tipoNome = DELETE_TIPO_NOMES_[movement.tipo] || movement.tipo;
+  const valor = movement.realizedValue === '' || movement.realizedValue === null ? formatMoney(movement.plannedValue) : formatMoney(movement.realizedValue);
+  return '[' + tipoNome + '] ' + movement.description + ' — ' + valor;
 }
 
 async function loadRecentMovements() {
   const select = document.getElementById('lancamento-correcao');
   try {
-    const data = await apiGet('recentMovements', { scope: 'manual' });
+    const data = await apiGet('recentMovements', { scope: 'manual', tipo: 'COMPRA_CARTAO' });
     select.innerHTML = '<option value="">Selecione…</option>' +
       data.movements.map(function(movement) {
-        return '<option value="' + movement.id + '">' + movementLabel_(movement) + '</option>';
+        return '<option value="' + movement.id + '">' + cardPurchaseLabel_(movement) + '</option>';
       }).join('');
   } catch (error) {
     select.innerHTML = '<option value="">Erro ao carregar lançamentos</option>';
@@ -118,10 +130,36 @@ async function loadRecentMovements() {
 async function loadPlannedMovements() {
   const select = document.getElementById('lancamento-planejado');
   try {
-    const data = await apiGet('recentMovements', { scope: 'all' });
+    const data = await apiGet('recentMovements', { scope: 'all', tipo: 'DESPESA' });
     select.innerHTML = '<option value="">Selecione…</option>' +
       data.movements.map(function(movement) {
-        return '<option value="' + movement.id + '">' + movementLabel_(movement) + '</option>';
+        return '<option value="' + movement.id + '">' + expenseLabel_(movement) + '</option>';
+      }).join('');
+  } catch (error) {
+    select.innerHTML = '<option value="">Erro ao carregar lançamentos</option>';
+  }
+}
+
+async function loadCardCategories() {
+  const select = document.getElementById('categoria-planejado-cartao');
+  try {
+    const data = await apiGet('cardCategories');
+    select.innerHTML = '<option value="">Selecione…</option>' +
+      data.categories.map(function(item) {
+        return '<option value="' + item.category + '">' + item.category + ' (planejado atual: ' + formatMoney(item.plannedValue) + ')</option>';
+      }).join('');
+  } catch (error) {
+    select.innerHTML = '<option value="">Erro ao carregar categorias</option>';
+  }
+}
+
+async function loadDeletableMovements() {
+  const select = document.getElementById('lancamento-excluir');
+  try {
+    const data = await apiGet('recentMovements', { scope: 'deletable' });
+    select.innerHTML = '<option value="">Selecione…</option>' +
+      data.movements.map(function(movement) {
+        return '<option value="' + movement.id + '">' + deleteLabel_(movement) + '</option>';
       }).join('');
   } catch (error) {
     select.innerHTML = '<option value="">Erro ao carregar lançamentos</option>';
@@ -274,6 +312,62 @@ function setupPlannedValueForm() {
   });
 }
 
+function setupCardCategoryPlannedForm() {
+  const form = document.getElementById('form-planejado-cartao');
+  const botaoSalvar = document.getElementById('botao-salvar-planejado-cartao');
+
+  form.addEventListener('submit', async function(event) {
+    event.preventDefault();
+    botaoSalvar.disabled = true;
+    botaoSalvar.textContent = 'Salvando…';
+    try {
+      const payload = {
+        category: document.getElementById('categoria-planejado-cartao').value,
+        value: document.getElementById('novo-valor-planejado-cartao').value,
+        reason: document.getElementById('motivo-planejado-cartao').value
+      };
+      const result = await apiPost('setCardCategoryPlanned', payload);
+      renderSnapshot(result.snapshot);
+      showMessage('mensagem-planejado-cartao', 'Valor planejado da categoria atualizado.', false);
+      form.reset();
+      loadCardCategories();
+    } catch (error) {
+      showMessage('mensagem-planejado-cartao', error.message, true);
+    } finally {
+      botaoSalvar.disabled = false;
+      botaoSalvar.textContent = 'Salvar valor da categoria';
+    }
+  });
+}
+
+function setupDeleteForm() {
+  const form = document.getElementById('form-excluir');
+  const botaoSalvar = document.getElementById('botao-salvar-excluir');
+
+  form.addEventListener('submit', async function(event) {
+    event.preventDefault();
+    if (!confirm('Excluir este lançamento definitivamente? Não tem como desfazer pelo app.')) return;
+    botaoSalvar.disabled = true;
+    botaoSalvar.textContent = 'Excluindo…';
+    try {
+      const payload = {
+        movementId: document.getElementById('lancamento-excluir').value,
+        reason: document.getElementById('motivo-excluir').value
+      };
+      const result = await apiPost('deleteMovement', payload);
+      renderSnapshot(result.snapshot);
+      showMessage('mensagem-excluir', 'Lançamento excluído.', false);
+      form.reset();
+      loadDeletableMovements();
+    } catch (error) {
+      showMessage('mensagem-excluir', error.message, true);
+    } finally {
+      botaoSalvar.disabled = false;
+      botaoSalvar.textContent = 'Excluir lançamento';
+    }
+  });
+}
+
 function dashboardLinha_(rotulo, valor) {
   return '<div class="linha"><span>' + rotulo + '</span><strong>' + valor + '</strong></div>';
 }
@@ -369,7 +463,9 @@ function irParaPagina(pagina) {
   if (pagina === 'patrimonio') loadPatrimonio();
   if (pagina === 'acesso') loadAccessList();
   if (pagina === 'correcao') loadRecentMovements();
-  if (pagina === 'planejado') loadPlannedMovements();
+  if (pagina === 'planejado') { loadPlannedMovements(); loadCardCategories(); }
+  if (pagina === 'excluir') loadDeletableMovements();
+  if (pagina === 'recorrencias') loadRolloverPreview();
   fecharMenuLateral_();
 }
 
@@ -523,21 +619,48 @@ function setupAccessForm() {
   });
 }
 
+async function loadRolloverPreview() {
+  const container = document.getElementById('rollover-preview');
+  container.innerHTML = '<p class="texto-suave">Carregando…</p>';
+  try {
+    const data = await apiGet('monthRolloverPreview');
+    const p = data.preview;
+    let html = dashboardLinha_('De', p.fromCompetence);
+    html += dashboardLinha_('Para', p.toCompetence);
+    html += '<div class="secao-titulo">Despesas fixas que serão geradas</div>';
+    if (p.items.length) {
+      p.items.forEach(function(item) {
+        const vencimento = item.fromDueDate ? (item.fromDueDate + ' → ' + item.toDueDate) : 'Sem vencimento';
+        const status = item.alreadyGenerated ? ' (já gerada)' : '';
+        html += dashboardLinha_(item.description + ' — ' + vencimento + status, formatMoney(item.plannedValue));
+      });
+    } else {
+      html += '<p class="texto-suave">Nenhuma despesa fixa recorrente ativa.</p>';
+    }
+    container.innerHTML = html;
+  } catch (error) {
+    container.innerHTML = '<p class="mensagem erro">' + error.message + '</p>';
+  }
+}
+
 function setupRecurrences() {
   const botao = document.getElementById('botao-recorrencias');
   botao.addEventListener('click', async function() {
-    if (!confirm('Gerar as recorrências do mês atual agora?')) return;
+    if (!confirm('Confirmar a virada do mês? Isso avança a competência ativa e gera as despesas fixas do próximo mês.')) return;
     botao.disabled = true;
-    botao.textContent = 'Gerando…';
+    botao.textContent = 'Processando…';
     try {
-      const result = await apiPost('generateRecurrences', {});
+      const result = await apiPost('monthRollover', {});
       renderSnapshot(result.snapshot);
-      showMessage('mensagem-recorrencias', result.generated + ' recorrência(s) gerada(s).', false);
+      showMessage('mensagem-recorrencias',
+        'Competência avançada de ' + result.fromCompetence + ' para ' + result.toCompetence + '. ' +
+        result.generated + ' despesa(s) gerada(s).', false);
+      loadRolloverPreview();
     } catch (error) {
       showMessage('mensagem-recorrencias', error.message, true);
     } finally {
       botao.disabled = false;
-      botao.textContent = 'Gerar recorrências do mês atual';
+      botao.textContent = 'Confirmar virada do mês';
     }
   });
 }
@@ -590,6 +713,8 @@ setupForm();
 setupCardPurchaseForm();
 setupCorrectionForm();
 setupPlannedValueForm();
+setupCardCategoryPlannedForm();
+setupDeleteForm();
 setupNetWorthForm();
 setupCardCurrentForm();
 setupAccessForm();
