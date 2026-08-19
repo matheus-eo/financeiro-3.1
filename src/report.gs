@@ -115,7 +115,9 @@ function buildWhatsAppReport_(snapshot) {
   lines.push('');
   lines.push('💳 *Detalhamento do Cartão*');
   if (snapshot.cardBreakdown.length) {
-    snapshot.cardBreakdown.forEach(function(item) {
+    snapshot.cardBreakdown.slice().sort(function(a, b) {
+      return b.plannedValue - a.plannedValue;
+    }).forEach(function(item) {
       lines.push(reportCardCategoryLabel_(item.category) + ': ' + reportMoney_(item.plannedValue) + ' (' + reportMoney_(item.realizedValue) + ')');
     });
   } else {

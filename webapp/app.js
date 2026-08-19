@@ -97,13 +97,16 @@ async function loadCategories() {
 }
 
 function cardPurchaseLabel_(movement) {
-  return movement.description + ' — ' + formatMoney(movement.realizedValue);
+  return (movement.date ? movement.date + ' ' : '') + movement.description + ' — ' + formatMoney(movement.realizedValue);
 }
 
 function expenseLabel_(movement) {
-  const planned = formatMoney(movement.plannedValue);
-  const realized = movement.realizedValue === '' || movement.realizedValue === null ? '—' : formatMoney(movement.realizedValue);
-  return movement.description + ' — Plan.: ' + planned + ' / Real.: ' + realized;
+  return (movement.date ? movement.date + ' ' : '') + movement.description + ' — Plan.: ' + formatMoney(movement.plannedValue);
+}
+
+function pendingExpenseLabel_(movement) {
+  const vencimento = movement.dueDate ? ' — vence ' + movement.dueDate : '';
+  return movement.description + vencimento + ' — Plan.: ' + formatMoney(movement.plannedValue);
 }
 
 const DELETE_TIPO_NOMES_ = { DESPESA: 'Despesa', COMPRA_CARTAO: 'Compra no cartão', RECEITA: 'Receita', AJUSTE: 'Ajuste' };
@@ -111,7 +114,7 @@ const DELETE_TIPO_NOMES_ = { DESPESA: 'Despesa', COMPRA_CARTAO: 'Compra no cart�
 function deleteLabel_(movement) {
   const tipoNome = DELETE_TIPO_NOMES_[movement.tipo] || movement.tipo;
   const valor = movement.realizedValue === '' || movement.realizedValue === null ? formatMoney(movement.plannedValue) : formatMoney(movement.realizedValue);
-  return '[' + tipoNome + '] ' + movement.description + ' — ' + valor;
+  return (movement.date ? movement.date + ' ' : '') + '[' + tipoNome + '] ' + movement.description + ' — ' + valor;
 }
 
 async function loadRecentMovements() {
@@ -166,6 +169,23 @@ async function loadDeletableMovements() {
   }
 }
 
+async function loadPendingExpenses() {
+  const select = document.getElementById('despesa-pendente');
+  try {
+    const data = await apiGet('recentMovements', { scope: 'pending' });
+    if (!data.movements.length) {
+      select.innerHTML = '<option value="">Nenhuma despesa pendente este mês</option>';
+      return;
+    }
+    select.innerHTML = '<option value="">Selecione…</option>' +
+      data.movements.map(function(movement) {
+        return '<option value="' + movement.id + '" data-planejado="' + movement.plannedValue + '">' + pendingExpenseLabel_(movement) + '</option>';
+      }).join('');
+  } catch (error) {
+    select.innerHTML = '<option value="">Erro ao carregar despesas</option>';
+  }
+}
+
 function showMessage(elementId, text, isError) {
   const el = document.getElementById(elementId);
   el.textContent = text;
@@ -175,6 +195,47 @@ function showMessage(elementId, text, isError) {
   if (!isError) {
     setTimeout(function() { el.className = 'mensagem'; }, 6000);
   }
+}
+
+function setupConfirmExpenseForm() {
+  const dataInput = document.getElementById('data-pagamento-despesa');
+  dataInput.value = todayISO();
+
+  const select = document.getElementById('despesa-pendente');
+  const valorInput = document.getElementById('valor-pago-despesa');
+  select.addEventListener('change', function() {
+    const option = select.options[select.selectedIndex];
+    const planejado = option ? option.getAttribute('data-planejado') : null;
+    if (planejado) valorInput.value = Number(planejado).toFixed(2);
+  });
+
+  const form = document.getElementById('form-confirmar-despesa');
+  const botaoSalvar = document.getElementById('botao-salvar-confirmar-despesa');
+
+  form.addEventListener('submit', async function(event) {
+    event.preventDefault();
+    botaoSalvar.disabled = true;
+    botaoSalvar.textContent = 'Salvando…';
+    try {
+      const payload = {
+        movementId: select.value,
+        paidValue: valorInput.value,
+        paymentDate: dataInput.value,
+        note: document.getElementById('observacao-pagamento-despesa').value
+      };
+      const result = await apiPost('registerPayment', payload);
+      renderSnapshot(result.snapshot);
+      showMessage('mensagem-confirmar-despesa', 'Despesa confirmada com sucesso.', false);
+      form.reset();
+      dataInput.value = todayISO();
+      loadPendingExpenses();
+    } catch (error) {
+      showMessage('mensagem-confirmar-despesa', error.message, true);
+    } finally {
+      botaoSalvar.disabled = false;
+      botaoSalvar.textContent = 'Confirmar despesa';
+    }
+  });
 }
 
 function setupForm() {
@@ -216,7 +277,7 @@ function setupForm() {
       showMessage('mensagem-despesa', error.message, true);
     } finally {
       botaoSalvar.disabled = false;
-      botaoSalvar.textContent = 'Salvar despesa';
+      botaoSalvar.textContent = 'Salvar novo registro';
     }
   });
 }
@@ -255,6 +316,19 @@ function setupCardPurchaseForm() {
 }
 
 function setupCorrectionForm() {
+  const campoSelect = document.getElementById('campo-correcao');
+  const novoValorInput = document.getElementById('novo-valor-correcao');
+  campoSelect.addEventListener('change', function() {
+    if (campoSelect.value === 'Data') {
+      novoValorInput.type = 'date';
+      novoValorInput.placeholder = '';
+      if (!novoValorInput.value) novoValorInput.value = todayISO();
+    } else {
+      novoValorInput.type = 'text';
+      novoValorInput.placeholder = 'Ex: 0 ou novo texto';
+    }
+  });
+
   const form = document.getElementById('form-correcao');
   const botaoSalvar = document.getElementById('botao-salvar-correcao');
 
@@ -273,6 +347,8 @@ function setupCorrectionForm() {
       renderSnapshot(result.snapshot);
       showMessage('mensagem-correcao', 'Correção registrada com sucesso.', false);
       form.reset();
+      novoValorInput.type = 'text';
+      novoValorInput.placeholder = 'Ex: 0 ou novo texto';
       loadRecentMovements();
     } catch (error) {
       showMessage('mensagem-correcao', error.message, true);
@@ -463,6 +539,7 @@ function irParaPagina(pagina) {
   if (pagina === 'patrimonio') loadPatrimonio();
   if (pagina === 'acesso') loadAccessList();
   if (pagina === 'correcao') loadRecentMovements();
+  if (pagina === 'despesa') loadPendingExpenses();
   if (pagina === 'planejado') { loadPlannedMovements(); loadCardCategories(); }
   if (pagina === 'excluir') loadDeletableMovements();
   if (pagina === 'recorrencias') loadRolloverPreview();
@@ -709,6 +786,7 @@ function handleGoogleSignIn(response) {
   showApp();
 }
 
+setupConfirmExpenseForm();
 setupForm();
 setupCardPurchaseForm();
 setupCorrectionForm();

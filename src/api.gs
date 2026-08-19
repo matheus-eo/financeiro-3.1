@@ -115,6 +115,8 @@ function doGet(e) {
         if (m.Competência !== competence || m.Tipo === FIN.TYPES.CARD_BILL) return false;
         if (scope !== 'deletable' && m.Tipo === FIN.TYPES.REVENUE) return false;
         if (scope === 'manual' && m.Origem !== FIN.ORIGINS.FORM) return false;
+        // Despesas fixas do mês ainda não confirmadas (pra "Confirmar despesa do mês").
+        if (scope === 'pending' && (m.Tipo !== FIN.TYPES.EXPENSE || isPaymentConfirmed_(m.Pago))) return false;
         if (tipoFilter && m.Tipo !== tipoFilter) return false;
         return true;
       }).sort(function(a, b) {
@@ -122,7 +124,9 @@ function doGet(e) {
       }).slice(0, 25).map(function(m) {
         return {
           id: m.ID, description: m.Descrição, tipo: m.Tipo,
-          plannedValue: m['Valor Planejado'], realizedValue: m['Valor Realizado']
+          plannedValue: m['Valor Planejado'], realizedValue: m['Valor Realizado'],
+          date: m.Data ? formatDate_(m.Data, 'dd/MM/yyyy') : '',
+          dueDate: m['Data de Vencimento'] ? formatDate_(m['Data de Vencimento'], 'dd/MM/yyyy') : ''
         };
       });
       return jsonOutput_({ ok: true, movements: movements });
@@ -217,6 +221,19 @@ function doPost(e) {
       };
       var cardResult = executeFinancialCommand_(cardCommand);
       return jsonOutput_({ ok: true, id: cardResult.movement.ID, snapshot: snapshotForApi_() });
+    }
+
+    if (action === 'registerPayment') {
+      requireEditor_(auth);
+      var paymentCommand = {
+        operation: FIN.OPERATIONS.PAYMENT,
+        movementId: body.movementId,
+        paymentDate: body.paymentDate ? new Date(body.paymentDate) : now_(),
+        paidValue: body.paidValue,
+        note: body.note || ''
+      };
+      var paymentResult = executeFinancialCommand_(paymentCommand);
+      return jsonOutput_({ ok: true, id: paymentResult.movement.ID, snapshot: snapshotForApi_() });
     }
 
     if (action === 'correctMovement') {
