@@ -97,7 +97,7 @@ function calculateFinancialSnapshot_(competence, movements, cardCurrent, current
       entries += valueOrZero_(movement['Valor Realizado']);
       return;
     }
-    if (movement.Tipo === FIN.TYPES.EXPENSE || movement.Tipo === FIN.TYPES.CARD_BILL) {
+    if (movement.Tipo === FIN.TYPES.EXPENSE || movement.Tipo === FIN.TYPES.CARD_BILL || movement.Tipo === FIN.TYPES.CARD_PURCHASE) {
       plannedCost += valueOrZero_(movement['Valor Planejado']);
     }
     if (movement.Tipo === FIN.TYPES.EXPENSE) {

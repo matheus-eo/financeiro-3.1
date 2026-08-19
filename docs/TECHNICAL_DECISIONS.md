@@ -12,7 +12,7 @@ Movimentações possuem colunas separadas para `Valor Planejado`, `Valor Realiza
 
 - Uma recorrência mensal nasce com valor planejado e sem valor realizado.
 - Uma despesa avulsa registrada pelo formulário possui, por informação explícita do usuário, o mesmo valor planejado e realizado, mas nasce com `Pago = Não`.
-- A compra no cartão recebe valor realizado e participa do Resultado Atual apenas por meio do agregado `Cartão (Despesas)`.
+- A compra no cartão recebe valor realizado e participa do Resultado Atual por meio do agregado `Cartão (Despesas)`. Seu valor planejado, quando informado, também compõe o Custo Planejado — que é sempre a soma do planejado de despesas, faturas do cartão e compras no cartão, refletida em tempo real a qualquer correção.
 - Ao registrar explicitamente um pagamento sem valor pago, o valor planejado preenche o valor realizado somente se ele ainda estiver vazio. Isso é consequência da confirmação de pagamento e não altera o estado por cálculo.
 
 ## Cartão

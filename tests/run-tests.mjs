@@ -76,6 +76,16 @@ test("CT-002: cartão é agregado uma única vez e não altera Cartão Atual", (
   assert.equal(snapshot.cardByCategory.Gasolina, 80);
 });
 
+test("Custo Planejado inclui o planejado das compras no cartão", () => {
+  const data = [
+    movement({ ID: "MOV-EXP", "Valor Planejado": 1000, "Valor Realizado": 800 }),
+    movement({ ID: "MOV-CARD-A", Tipo: FIN.TYPES.CARD_PURCHASE, Categoria: "Alimentação", "Valor Planejado": 1500, "Valor Realizado": 1500 }),
+    movement({ ID: "MOV-CARD-B", Tipo: FIN.TYPES.CARD_PURCHASE, Categoria: "Gasolina", "Valor Planejado": 600, "Valor Realizado": 600 }),
+  ];
+  const snapshot = context.calculateFinancialSnapshot_("2026-07", data, 0, [], date("2026-07-10"));
+  assert.equal(snapshot.plannedCost, 3100, "1000 (despesa) + 1500 + 600 (compras no cartão)");
+});
+
 test("CT-003: valor manual do Cartão Atual é independente dos movimentos", () => {
   const snapshot = context.calculateFinancialSnapshot_("2026-07", [
     movement({ Tipo: FIN.TYPES.CARD_PURCHASE, "Valor Realizado": 300 }),
