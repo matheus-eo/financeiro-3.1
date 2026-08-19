@@ -44,6 +44,8 @@
     <button type="button" class="menu-item requer-edicao" data-page="cartao">💳 Compra no cartão</button>
     <button type="button" class="menu-item requer-edicao" data-page="correcao">🛠️ Corrigir lançamento cartão</button>
     <div class="menu-separador requer-edicao"></div>
+    <button type="button" class="menu-item requer-edicao" data-page="entradas">💰 Entradas</button>
+    <div class="menu-separador requer-edicao"></div>
     <button type="button" class="menu-item requer-edicao" data-page="despesa">📝 Registrar despesa</button>
     <button type="button" class="menu-item requer-edicao" data-page="planejado">📐 Ajustar valor planejado</button>
     <div class="menu-separador requer-edicao"></div>
@@ -76,6 +78,14 @@
         <div class="rotulo">Lançamentos Futuros</div>
         <div class="valor" id="resumo-pendentes">—</div>
       </div>
+      <div class="item">
+        <div class="rotulo">Cartão atual</div>
+        <div class="valor" id="resumo-cartao-atual">—</div>
+      </div>
+      <div class="item">
+        <div class="rotulo">Resultado previsto</div>
+        <div class="valor" id="resumo-previsto">—</div>
+      </div>
     </section>
 
     <section class="pagina cartao" data-page="cartao">
@@ -104,6 +114,68 @@
 
         <button type="submit" class="primario" id="botao-salvar-cartao">Salvar compra no cartão</button>
         <div class="mensagem" id="mensagem-cartao"></div>
+      </form>
+    </section>
+
+    <section class="pagina cartao" data-page="entradas">
+      <h2>Entradas</h2>
+
+      <h3>Registrar nova entrada</h3>
+      <p class="texto-suave">
+        Use para receitas do mês: salário, bônus, extra etc.
+      </p>
+      <form id="form-receita">
+        <label for="descricao-receita">Descrição</label>
+        <input type="text" id="descricao-receita" required placeholder="Ex: Salário Matheus">
+
+        <label for="valor-receita">Valor (R$)</label>
+        <input type="number" id="valor-receita" required inputmode="decimal" step="0.01" min="0" placeholder="0,00">
+
+        <label for="categoria-receita">Categoria</label>
+        <select id="categoria-receita" required>
+          <option value="">Carregando categorias…</option>
+        </select>
+
+        <label for="data-receita">Data</label>
+        <input type="date" id="data-receita" required>
+
+        <label for="observacao-receita">Observação (opcional)</label>
+        <textarea id="observacao-receita" placeholder="Detalhes adicionais"></textarea>
+
+        <button type="submit" class="primario" id="botao-salvar-receita">Salvar entrada</button>
+        <div class="mensagem" id="mensagem-receita"></div>
+      </form>
+
+      <div class="divisor"></div>
+
+      <h3>Corrigir entrada</h3>
+      <p class="texto-suave">
+        Corrige o valor, a data, a descrição, a categoria ou a observação de uma entrada já
+        registrada neste mês. A alteração fica registrada no Histórico com o motivo.
+      </p>
+      <form id="form-correcao-receita">
+        <label for="lancamento-correcao-receita">Entrada</label>
+        <select id="lancamento-correcao-receita" required>
+          <option value="">Carregando entradas…</option>
+        </select>
+
+        <label for="campo-correcao-receita">Campo a corrigir</label>
+        <select id="campo-correcao-receita" required>
+          <option value="Valor Realizado">Valor Realizado</option>
+          <option value="Data">Data</option>
+          <option value="Descrição">Descrição</option>
+          <option value="Categoria">Categoria</option>
+          <option value="Observação">Observação</option>
+        </select>
+
+        <label for="novo-valor-correcao-receita">Novo valor</label>
+        <input type="text" id="novo-valor-correcao-receita" required placeholder="Ex: 0 ou novo texto">
+
+        <label for="motivo-correcao-receita">Motivo</label>
+        <textarea id="motivo-correcao-receita" required placeholder="Ex: Salário reajustado"></textarea>
+
+        <button type="submit" class="secundario" id="botao-salvar-correcao-receita">Salvar correção</button>
+        <div class="mensagem" id="mensagem-correcao-receita"></div>
       </form>
     </section>
 

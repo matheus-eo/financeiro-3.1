@@ -71,6 +71,12 @@ function renderSnapshot(snapshot) {
 
   const futurosTotal = snapshot.launches.reduce(function(sum, launch) { return sum + launch.plannedValue; }, 0);
   document.getElementById('resumo-pendentes').textContent = formatMoney(futurosTotal);
+
+  document.getElementById('resumo-cartao-atual').textContent = formatMoney(snapshot.cardCurrent);
+
+  const previsto = document.getElementById('resumo-previsto');
+  previsto.textContent = formatMoney(snapshot.forecastResult);
+  previsto.className = 'valor ' + (snapshot.forecastResult >= 0 ? 'positivo' : 'negativo');
 }
 
 async function loadSnapshot() {
@@ -83,7 +89,7 @@ async function loadSnapshot() {
 }
 
 async function loadCategories() {
-  const selects = [document.getElementById('categoria'), document.getElementById('categoria-cartao')];
+  const selects = [document.getElementById('categoria'), document.getElementById('categoria-cartao'), document.getElementById('categoria-receita')];
   try {
     const data = await apiGet('categories');
     const options = '<option value="">Selecione…</option>' +
@@ -115,6 +121,23 @@ function deleteLabel_(movement) {
   const tipoNome = DELETE_TIPO_NOMES_[movement.tipo] || movement.tipo;
   const valor = movement.realizedValue === '' || movement.realizedValue === null ? formatMoney(movement.plannedValue) : formatMoney(movement.realizedValue);
   return (movement.date ? movement.date + ' ' : '') + '[' + tipoNome + '] ' + movement.description + ' — ' + valor;
+}
+
+function revenueLabel_(movement) {
+  return (movement.date ? movement.date + ' ' : '') + movement.description + ' — ' + formatMoney(movement.realizedValue);
+}
+
+async function loadRevenueMovements() {
+  const select = document.getElementById('lancamento-correcao-receita');
+  try {
+    const data = await apiGet('recentMovements', { scope: 'all', tipo: 'RECEITA' });
+    select.innerHTML = '<option value="">Selecione…</option>' +
+      data.movements.map(function(movement) {
+        return '<option value="' + movement.id + '">' + revenueLabel_(movement) + '</option>';
+      }).join('');
+  } catch (error) {
+    select.innerHTML = '<option value="">Erro ao carregar entradas</option>';
+  }
 }
 
 async function loadRecentMovements() {
@@ -195,6 +218,84 @@ function showMessage(elementId, text, isError) {
   if (!isError) {
     setTimeout(function() { el.className = 'mensagem'; }, 6000);
   }
+}
+
+function setupRevenueForm() {
+  const dataInput = document.getElementById('data-receita');
+  dataInput.value = todayISO();
+
+  const form = document.getElementById('form-receita');
+  const botaoSalvar = document.getElementById('botao-salvar-receita');
+
+  form.addEventListener('submit', async function(event) {
+    event.preventDefault();
+    botaoSalvar.disabled = true;
+    botaoSalvar.textContent = 'Salvando…';
+    try {
+      const payload = {
+        description: document.getElementById('descricao-receita').value,
+        value: document.getElementById('valor-receita').value,
+        category: document.getElementById('categoria-receita').value,
+        date: dataInput.value,
+        note: document.getElementById('observacao-receita').value
+      };
+      const result = await apiPost('registerRevenue', payload);
+      renderSnapshot(result.snapshot);
+      showMessage('mensagem-receita', 'Entrada registrada com sucesso.', false);
+      form.reset();
+      dataInput.value = todayISO();
+      loadRevenueMovements();
+    } catch (error) {
+      showMessage('mensagem-receita', error.message, true);
+    } finally {
+      botaoSalvar.disabled = false;
+      botaoSalvar.textContent = 'Salvar entrada';
+    }
+  });
+}
+
+function setupRevenueCorrectionForm() {
+  const campoSelect = document.getElementById('campo-correcao-receita');
+  const novoValorInput = document.getElementById('novo-valor-correcao-receita');
+  campoSelect.addEventListener('change', function() {
+    if (campoSelect.value === 'Data') {
+      novoValorInput.type = 'date';
+      novoValorInput.placeholder = '';
+      if (!novoValorInput.value) novoValorInput.value = todayISO();
+    } else {
+      novoValorInput.type = 'text';
+      novoValorInput.placeholder = 'Ex: 0 ou novo texto';
+    }
+  });
+
+  const form = document.getElementById('form-correcao-receita');
+  const botaoSalvar = document.getElementById('botao-salvar-correcao-receita');
+
+  form.addEventListener('submit', async function(event) {
+    event.preventDefault();
+    botaoSalvar.disabled = true;
+    botaoSalvar.textContent = 'Salvando…';
+    try {
+      const payload = {
+        movementId: document.getElementById('lancamento-correcao-receita').value,
+        field: campoSelect.value,
+        newValue: novoValorInput.value,
+        reason: document.getElementById('motivo-correcao-receita').value
+      };
+      const result = await apiPost('correctMovement', payload);
+      renderSnapshot(result.snapshot);
+      showMessage('mensagem-correcao-receita', 'Correção registrada com sucesso.', false);
+      form.reset();
+      novoValorInput.type = 'text';
+      novoValorInput.placeholder = 'Ex: 0 ou novo texto';
+      loadRevenueMovements();
+    } catch (error) {
+      showMessage('mensagem-correcao-receita', error.message, true);
+    } finally {
+      botaoSalvar.disabled = false;
+      botaoSalvar.textContent = 'Salvar correção';
+    }
+  });
 }
 
 function setupConfirmExpenseForm() {
@@ -539,6 +640,7 @@ function irParaPagina(pagina) {
   if (pagina === 'patrimonio') loadPatrimonio();
   if (pagina === 'acesso') loadAccessList();
   if (pagina === 'correcao') loadRecentMovements();
+  if (pagina === 'entradas') loadRevenueMovements();
   if (pagina === 'despesa') loadPendingExpenses();
   if (pagina === 'planejado') { loadPlannedMovements(); loadCardCategories(); }
   if (pagina === 'excluir') loadDeletableMovements();
@@ -786,6 +888,8 @@ function handleGoogleSignIn(response) {
   showApp();
 }
 
+setupRevenueForm();
+setupRevenueCorrectionForm();
 setupConfirmExpenseForm();
 setupForm();
 setupCardPurchaseForm();
